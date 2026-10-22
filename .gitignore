@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+.wrangler/
+.dev.vars
+.env*
+*.log
+.DS_Store
+Thumbs.db
+# documenti riservati del maintainer (es. valutazione dei rischi legali): mai pubblicati
+docs/private/
+# dati MIMIT scaricati: si rigenerano con lo script di import
+data/raw/
