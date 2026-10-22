@@ -1,4 +1,7 @@
 node_modules/
+# client compilato da scripts/build-client.ts
+public/app.js
+public/pow.js
 dist/
 coverage/
 .wrangler/
