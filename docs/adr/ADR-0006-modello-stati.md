@@ -58,6 +58,13 @@ Su richiesta del maintainer, `GREEN_MIN` e `RED_MIN` passano da 2,0 a **3,0**.
 - **Peso remoto da 0,5 a 0,25:** 4 segnalazioni da remoto valgono 1 persona sul posto. Uno stato verde o rosso costruito *solo* da remoto richiede 12 reti diverse, quindi in pratica le segnalazioni remote *rafforzano* quelle sul posto senza sostituirle.
 - **Conseguenza per la UI:** chi è al distributore con il GPS spento conta 0,25. Il pulsante "Sono qui" (una sola lettura GPS al momento della segnalazione) diventa importante: va proposto in evidenza, spiegando che la segnalazione "vale 4 volte di più".
 
+### Revisione v0.3.3: regole dell'affidabilità decise dal maintainer
+Il punteggio logistico proposto inizialmente è sostituito da regole esplicite, più facili da spiegare:
+- **Alta (3):** almeno **4 persone negli ultimi 10 minuti, di cui almeno 2 sul posto**.
+- **Media (2):** ogni altro verde o rosso pieno (esempio del maintainer: 3 persone, l'ultima 40 minuti fa).
+- **Bassa (1):** qualsiasi ambra.
+- Le "persone" sono contate come **reti diverse**, per coerenza con `CAP_PREFIX`: 4 token dallo stesso telefono valgono 1.
+
 ### Ibrido A + C: perché un indicatore a livelli e non una percentuale
 *Proposta del maintainer: "E se unissimo A e C, indicando la percentuale come probabilità di presenza?"*
 

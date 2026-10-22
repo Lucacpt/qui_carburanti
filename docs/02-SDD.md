@@ -241,7 +241,7 @@ altrimenti (lastPos ≠ null garantito)                                → AMBRA
 Parametri aggiunti in v0.3.2 (ADR-0011): `RED_HOLD = 10 min`, `RED_TTL = 90 min`. Il risultato include anche `absences` e `lastAbsenceMs` per le etichette (`src/domain/labels.ts`).
 Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 
-**Score e affidabilità (ibrido A + C):** `score = logistic(Σ ± w_i · cap · e^(−età_i / τ))`, con τ tale che il dimezzamento avvenga a `FRESH`/1,5. Le soglie dello score per i 3 livelli di affidabilità sono da tarare con i test e i dati reali. Lo score **non cambia lo stato**: serve solo per l'ordinamento secondario e per l'indicatore.
+**Affidabilità (v0.3.3, regole del maintainer, `src/domain/reliability.ts`):** **alta** se negli ultimi 10 minuti ci sono almeno 4 persone (reti diverse) di cui almeno 2 sul posto; **media** per ogni altro verde o rosso pieno (es. 3 persone, l'ultima 40 minuti fa); **bassa** per qualsiasi ambra. L'affidabilità **non cambia lo stato**: serve per l'indicatore e come ordinamento secondario. Lo `StateResult` espone per questo le `evidence` (ora, posto, rete delle segnalazioni che giustificano lo stato), che non vengono mai pubblicate.
 
 **Coda e limite:** il valore più recente confermato da ≥ 2 `pkey` diverse in `QUEUE_WINDOW`, altrimenti l'ultimo valore segnalato con l'etichetta "1 segnalazione".
 

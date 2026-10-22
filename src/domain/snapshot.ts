@@ -83,5 +83,7 @@ export function rowToResult(row: SnapshotRow, t: number): StateResult {
     flags,
     lastConfirmMs: absences > 0 ? null : ts,
     lastAbsenceMs: absences > 0 ? ts : null,
+    // Le singole segnalazioni non vengono mai pubblicate: l'affidabilità arriva già calcolata nella riga.
+    evidence: [],
   };
 }

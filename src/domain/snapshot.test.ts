@@ -13,6 +13,7 @@ const res = (over: Partial<StateResult>): StateResult => ({
   absences: 0,
   lastAbsenceMs: null,
   flags: Flag.NONE,
+  evidence: [],
   ...over,
 });
 const entry = (id: number, result: StateResult, frozen = false): SnapshotEntry => ({

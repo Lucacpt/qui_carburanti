@@ -56,4 +56,16 @@ export interface StateResult {
   readonly lastAbsenceMs: number | null;
   /** Combinazione di valori `Flag`. */
   readonly flags: number;
+  /**
+   * Le segnalazioni che giustificano lo stato (le assenze per il rosso, le conferme fresche
+   * altrimenti), ridotte a ora, posto e rete. Servono all'indicatore di affidabilità;
+   * non vengono pubblicate.
+   */
+  readonly evidence: readonly Evidence[];
+}
+
+export interface Evidence {
+  readonly ts: number;
+  readonly near: boolean;
+  readonly pkey: string;
 }

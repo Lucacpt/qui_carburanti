@@ -2,7 +2,7 @@
 // Funzione pura: stesse segnalazioni + stesso `now` ⇒ stesso risultato.
 
 import { DEFAULT_PARAMS, type StateParams } from "./config.ts";
-import { Flag, type Report, State, type StateResult } from "./types.ts";
+import { type Evidence, Flag, type Report, State, type StateResult } from "./types.ts";
 
 /** Per ogni segnalatore (`rkey`) tiene solo la segnalazione più recente. */
 export function latestPerReporter(reports: readonly Report[]): Report[] {
@@ -41,6 +41,7 @@ export function computeState(
       absences: 0,
       lastAbsenceMs: null,
       flags: Flag.NONE,
+      evidence: [],
     };
   }
 
@@ -69,6 +70,7 @@ export function computeState(
     lastConfirmMs: lastPos,
     absences: neg.length,
     lastAbsenceMs: maxTs(neg),
+    evidence: pos45.map(toEvidence),
   };
 
   // Cascata di decisione: vince la prima regola che corrisponde (SDD §8).
@@ -78,7 +80,7 @@ export function computeState(
     const last = Math.max(...neg.map((r) => r.ts));
     if (now - last > p.redTtlMs) return { ...base, state: State.AMBER, flags: Flag.RED_EXPIRED };
     if (now - first < p.redHoldMs) return { ...base, state: State.AMBER, flags: Flag.RED_PENDING };
-    return { ...base, state: State.RED, flags: Flag.NONE };
+    return { ...base, state: State.RED, flags: Flag.NONE, evidence: neg.map(toEvidence) };
   }
   // 2. Conferme fresche sufficienti, tutte successive all'ultima assenza (quindi negW è 0).
   if (posW45 >= p.greenMin) return { ...base, state: State.GREEN, flags: Flag.NONE };
@@ -89,6 +91,8 @@ export function computeState(
   // 4. Solo conferme insufficienti o non fresche. Qui lastPos non è mai null: senza conferme, neg = recent ≠ ∅.
   return { ...base, state: State.AMBER, flags: Flag.NONE };
 }
+
+const toEvidence = (r: Report): Evidence => ({ ts: r.ts, near: r.near, pkey: r.pkey });
 
 function maxTs(reports: readonly Report[]): number | null {
   return reports.length > 0 ? Math.max(...reports.map((r) => r.ts)) : null;

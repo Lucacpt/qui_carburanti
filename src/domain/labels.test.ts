@@ -13,6 +13,7 @@ function result(over: Partial<StateResult>): StateResult {
     absences: 0,
     lastAbsenceMs: null,
     flags: Flag.NONE,
+    evidence: [],
     ...over,
   };
 }
