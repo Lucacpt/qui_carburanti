@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { createChallenge, POW_TTL_MS, requireSecret, solveChallenge, verifyPow } from "./pow.ts";
+import {
+  createChallenge,
+  POW_TTL_MS,
+  requireSecret,
+  solveChallenge,
+  uniformInt,
+  verifyPow,
+} from "./pow.ts";
 
 const SECRET = "segreto-di-test";
 const NOW = Date.UTC(2026, 9, 22, 12, 0, 0);
@@ -8,6 +15,26 @@ async function solved(prov = "AV", now = NOW) {
   const c = await createChallenge(SECRET, prov, now, 300);
   return { c, payload: await solveChallenge(c) };
 }
+
+describe("uniformInt", () => {
+  it("resta nell'intervallo e copre tutti i valori, senza modulo", () => {
+    const seen = new Set<number>();
+    for (let i = 0; i < 2000; i++) {
+      const v = uniformInt(5);
+      expect(v).toBeGreaterThanOrEqual(0);
+      expect(v).toBeLessThanOrEqual(5);
+      seen.add(v);
+    }
+    expect([...seen].sort()).toEqual([0, 1, 2, 3, 4, 5]);
+    expect(uniformInt(0)).toBe(0);
+  });
+
+  it("rifiuta limiti non validi", () => {
+    expect(() => uniformInt(-1)).toThrow();
+    expect(() => uniformInt(1.5)).toThrow();
+    expect(() => uniformInt(2 ** 31)).toThrow();
+  });
+});
 
 describe("proof-of-work", () => {
   it("una soluzione corretta viene accettata", async () => {

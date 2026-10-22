@@ -17,6 +17,22 @@ export function requireSecret(secret: string | undefined): string {
   return secret;
 }
 
+/**
+ * Intero uniforme in [0, max]. Il modulo (`x % (max + 1)`) favorirebbe i numeri bassi:
+ * qui si tiene solo la maschera di bit necessaria e si scartano i valori fuori intervallo.
+ */
+export function uniformInt(max: number): number {
+  if (!Number.isInteger(max) || max < 0 || max > 0x7fffffff) throw new RangeError("max non valido");
+  let mask = 0;
+  while (mask < max) mask = mask * 2 + 1;
+  const buf = new Uint32Array(1);
+  for (;;) {
+    crypto.getRandomValues(buf);
+    const v = (buf[0] ?? 0) & mask;
+    if (v <= max) return v;
+  }
+}
+
 export interface Challenge {
   readonly algorithm: "SHA-256";
   readonly challenge: string;
@@ -33,7 +49,7 @@ export async function createChallenge(
 ): Promise<Challenge> {
   const expires = Math.floor((now + POW_TTL_MS) / 1000);
   const salt = `${randomHex(12)}?p=${encodeURIComponent(prov)}&expires=${expires}`;
-  const number = (crypto.getRandomValues(new Uint32Array(1))[0] ?? 0) % (maxNumber + 1);
+  const number = uniformInt(maxNumber);
   const challenge = await sha256Hex(`${salt}${number}`);
   return {
     algorithm: "SHA-256",
