@@ -24,7 +24,8 @@ export const DEFAULT_PARAMS: StateParams = {
   freshMs: 45 * MINUTE,
   windowMs: 8 * 60 * MINUTE,
   wNear: 1.0,
-  wRemote: 0.5,
+  // v0.3.1: da 0,5 a 0,25 su richiesta del maintainer. 4 segnalazioni da remoto = 1 persona sul posto.
+  wRemote: 0.25,
   capPrefix: 1.0,
   // v0.3.1: +1 persona rispetto alla v0.3 su richiesta del maintainer (verde e rosso da 2,0 a 3,0).
   greenMin: 3.0,

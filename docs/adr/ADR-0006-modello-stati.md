@@ -8,7 +8,7 @@
 Il modello originale a 3 stati confonde "nessuna informazione" con "esaurito", usa l'etichetta "probabilmente esaurito" per conferme recenti e consente a una sola segnalazione negativa di colorare di rosso un distributore.
 
 ## Decision
-Quattro stati (● Disponibile, ▲ Da verificare, ✕ Segnalato esaurito, ○ Nessuna informazione) calcolati per carburante, con l'algoritmo in [SDD §8](../02-SDD.md#8-algoritmo-di-stato-dominio): pesi `near`=1,0 / `remote`=0,5, cap 1,0 per prefisso IP, soglia verde **3,0**, soglia rossa **3,0** con almeno 1 assenza sul posto (rivisto in v0.3 e v0.3.1). Più un indicatore di affidabilità a 3 livelli (ibrido A + C, v0.3).
+Quattro stati (● Disponibile, ▲ Da verificare, ✕ Segnalato esaurito, ○ Nessuna informazione) calcolati per carburante, con l'algoritmo in [SDD §8](../02-SDD.md#8-algoritmo-di-stato-dominio): pesi `near`=1,0 / `remote`=**0,25** (v0.3.1), cap 1,0 per prefisso IP, soglia verde **3,0**, soglia rossa **3,0** con almeno 1 assenza sul posto (rivisto in v0.3 e v0.3.1). Più un indicatore di affidabilità a 3 livelli (ibrido A + C, v0.3).
 
 ## Options Considered
 
@@ -55,6 +55,8 @@ Su richiesta del maintainer, `GREEN_MIN` e `RED_MIN` passano da 2,0 a **3,0**.
 - **Effetto anti-abuso:** con `CAP_PREFIX` = 1,0, servono almeno **3 reti diverse** per cambiare uno stato. Due reti non bastano più, e lo verifica un test di proprietà.
 - **Costo:** con pochi utenti il verde arriva più tardi e resterà più spesso ambra. Da monitorare con la metrica "tempo alla conferma" nei primi giorni.
 - **Restano a 2 reti** l'aggregazione di coda/limite (SDD §8) e le notifiche push (ADR-0009), che però scattano solo sul verde, quindi di fatto dopo 3 conferme.
+- **Peso remoto da 0,5 a 0,25:** 4 segnalazioni da remoto valgono 1 persona sul posto. Uno stato verde o rosso costruito *solo* da remoto richiede 12 reti diverse, quindi in pratica le segnalazioni remote *rafforzano* quelle sul posto senza sostituirle.
+- **Conseguenza per la UI:** chi è al distributore con il GPS spento conta 0,25. Il pulsante "Sono qui" (una sola lettura GPS al momento della segnalazione) diventa importante: va proposto in evidenza, spiegando che la segnalazione "vale 4 volte di più".
 
 ### Ibrido A + C: perché un indicatore a livelli e non una percentuale
 *Proposta del maintainer: "E se unissimo A e C, indicando la percentuale come probabilità di presenza?"*

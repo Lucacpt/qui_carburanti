@@ -40,7 +40,7 @@ describe("helper", () => {
     const sameNet = [yes(1, { pkey: "x" }), yes(2, { pkey: "x" }), yes(3, { pkey: "x" })];
     expect(cappedWeight(sameNet, DEFAULT_PARAMS)).toBe(1.0);
     expect(cappedWeight([yes(1, { near: false }), yes(2, { near: false })], DEFAULT_PARAMS)).toBe(
-      1.0,
+      0.5,
     );
   });
 });
@@ -92,21 +92,26 @@ describe("computeState — tabella dei casi (SDD §8, rev. v0.3.1: soglie a 3 pe
       conf: 3,
     },
     {
-      name: "6 conferme remote da 6 reti → verde",
-      reports: [1, 2, 3, 4, 5, 6].map((m) => yes(m, { near: false })),
+      name: "12 conferme remote da 12 reti → verde (12 × 0,25 = 3,0)",
+      reports: Array.from({ length: 12 }, (_, i) => yes(i + 1, { near: false })),
+      state: State.GREEN,
+      conf: 12,
+    },
+    {
+      name: "11 conferme remote da 11 reti → ambra",
+      reports: Array.from({ length: 11 }, (_, i) => yes(i + 1, { near: false })),
+      state: State.AMBER,
+    },
+    {
+      name: "2 conferme sul posto + 4 remote → verde (peso 3,0)",
+      reports: [yes(5), yes(6), ...[7, 8, 9, 10].map((m) => yes(m, { near: false }))],
       state: State.GREEN,
       conf: 6,
     },
     {
-      name: "5 conferme remote da 5 reti → ambra",
-      reports: [1, 2, 3, 4, 5].map((m) => yes(m, { near: false })),
+      name: "2 conferme sul posto + 3 remote → ambra (peso 2,75)",
+      reports: [yes(5), yes(6), ...[7, 8, 9].map((m) => yes(m, { near: false }))],
       state: State.AMBER,
-    },
-    {
-      name: "2 conferme sul posto + 2 remote → verde (peso 3,0)",
-      reports: [yes(5), yes(6), yes(7, { near: false }), yes(8, { near: false })],
-      state: State.GREEN,
-      conf: 4,
     },
     {
       name: "3 conferme vecchie (60 min) → ambra non confermato",
@@ -132,13 +137,19 @@ describe("computeState — tabella dei casi (SDD §8, rev. v0.3.1: soglie a 3 pe
       state: State.RED,
     },
     {
-      name: "2 assenze sul posto + 2 remote → rosso (peso 3,0 con almeno una sul posto)",
-      reports: [no(5), no(6), no(7, { near: false }), no(8, { near: false })],
+      name: "2 assenze sul posto + 4 remote → rosso (peso 3,0 con almeno una sul posto)",
+      reports: [no(5), no(6), ...[7, 8, 9, 10].map((m) => no(m, { near: false }))],
       state: State.RED,
     },
     {
-      name: "6 assenze remote (nessuna sul posto) → ambra, mai rosso",
-      reports: [1, 2, 3, 4, 5, 6].map((m) => no(m, { near: false })),
+      name: "2 assenze sul posto + 3 remote → ambra (peso 2,75)",
+      reports: [no(5), no(6), ...[7, 8, 9].map((m) => no(m, { near: false }))],
+      state: State.AMBER,
+      flags: Flag.SINGLE_ABSENCE,
+    },
+    {
+      name: "12 assenze remote (peso 3,0 ma nessuna sul posto) → ambra, mai rosso",
+      reports: Array.from({ length: 12 }, (_, i) => no(i + 1, { near: false })),
       state: State.AMBER,
       flags: Flag.SINGLE_ABSENCE,
     },
