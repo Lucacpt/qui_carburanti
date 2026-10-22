@@ -2,7 +2,6 @@
 // Uso: node scripts/smoke.ts [http://127.0.0.1:8787]
 
 import { randomBytes } from "node:crypto";
-import { readFileSync } from "node:fs";
 import { type Challenge, solveChallenge } from "../src/worker/pow.ts";
 
 const BASE = process.argv[2] ?? "http://127.0.0.1:8787";
@@ -35,14 +34,15 @@ const token = () => randomBytes(16).toString("base64url");
 
 async function main() {
   await waitForServer();
-  const manifest = JSON.parse(
-    readFileSync(new URL("../public/r/manifest.json", import.meta.url), "utf8"),
-  );
-  const reg = JSON.parse(
-    readFileSync(new URL(`../public/r/${manifest.files[PROV]}`, import.meta.url), "utf8"),
-  );
-  const station = (reg.st as number[][]).find((s) => ((s[7] ?? 0) & 1) === 1)?.[0];
-  if (station === undefined) throw new Error("nessun impianto con benzina");
+  // L'anagrafica si prende dall'istanza sotto test: in staging può differire dal disco locale.
+  const manifest = (await (await fetch(`${BASE}/r/manifest.json`)).json()) as {
+    files: Record<string, string>;
+  };
+  const file = manifest.files[PROV];
+  if (!file || !/^[A-Z]{2}\.[0-9a-f]{8}\.json$/.test(file)) throw new Error("manifest non valido");
+  const reg = (await (await fetch(`${BASE}/r/${file}`)).json()) as { st: number[][] };
+  const station = reg.st.find((s) => ((s[7] ?? 0) & 1) === 1)?.[0];
+  if (!Number.isInteger(station)) throw new Error("nessun impianto con benzina");
 
   const health = await fetch(`${BASE}/api/health`);
   check("health", health.ok);
