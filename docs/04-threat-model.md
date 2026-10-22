@@ -52,7 +52,10 @@
 - D1.2 Rilevamento raffica (SDD §8.1): più di 4 assenze da prefissi diversi in 5' su un distributore verde → PoW ×4 + notifica.
 - D1.3 Storico 8 h visibile nel dettaglio: un pattern "verde, verde, verde, rosso improvviso" è riconoscibile.
 - D1.4 **Notice & action del gestore** + congelamento manuale con nota.
-- D1.5 Etichetta "*Segnalato* esaurito – ultima segnalazione 3 min fa" invece di "Esaurito".
+- D1.5 Etichetta "*Segnalato* esaurito da 3 persone – ultima segnalazione 3 min fa" invece di "Esaurito" (ADR-0011 E).
+- D1.6 *(v0.3.2)* **Rosso in verifica:** se le assenze arrivano tutte in 10', per 10' si mostra ambra e i maintainer vengono avvisati. L'attacco con la modalità aereo (3 IP in 2 minuti) diventa visibile prima di produrre danni (ADR-0011 C).
+- D1.7 *(v0.3.2)* **Scadenza del rosso** dopo 90' senza nuove assenze: per mantenere un falso rosso l'attaccante deve ripetere l'attacco ogni ora e mezza, esponendosi ogni volta (ADR-0011 B).
+- D1.8 *(v0.3.2)* **Registro anonimo dei cambi di stato:** permette di ricostruire un attacco e di rispondere al gestore con i dati (ADR-0011 D).
 
 **Rischio residuo: MEDIO-BASSO (v0.3).** Serve un attaccante con almeno 2 IP diversi e un nuovo token per ciascuno (passo 3): l'attacco "da un tocco" non esiste più. **Accettato** e mitigato dalla visibilità.
 

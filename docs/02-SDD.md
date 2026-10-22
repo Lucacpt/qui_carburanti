@@ -88,7 +88,7 @@ File `r/<PROV>.<hash8>.json`, servito con `Cache-Control: public, max-age=315360
   "s": [[12345, "B", 3, 4, 5, 0, 3, 2, 0], [12345, "G", 1, 0, 120, 2, 1, 0, 0]]
 }
 ```
-- Stato: `0` grigio, `1` rosso, `2` ambra, `3` verde. Flag: `1` congelato dal maintainer, `2` contrastante, `4` assenza singola da verificare.
+- Stato: `0` grigio, `1` rosso, `2` ambra, `3` verde. Flag: `1` congelato dal maintainer, `2` contrastante, `4` assenza da verificare, `8` rosso in verifica, `16` rosso scaduto (ADR-0011).
 - Affidabilità (ADR-0006, ibrido): `1` bassa, `2` media, `3` alta, ricavata dallo `score` interno.
 - Coda: `0` sconosciuta, `1` nessuna, `2` breve (< 15'), `3` lunga (> 15'). Limite: `0` sconosciuto/no, `1` sì.
 - **Età in bucket da 5 minuti**: i timestamp esatti permetterebbero di correlare una segnalazione con una persona vista sul posto.
@@ -121,6 +121,13 @@ CREATE TABLE contests (           -- notice & action DSA; email facoltativa, can
   ts INTEGER, status TEXT
 );
 CREATE TABLE config (k TEXT PRIMARY KEY, v TEXT);  -- read_only, pow_difficulty, ...
+CREATE TABLE transitions (        -- ADR-0011 D: registro anonimo dei cambi di stato, conservato 30 giorni
+  station INTEGER NOT NULL, fuel TEXT NOT NULL,
+  ts INTEGER NOT NULL,            -- arrotondato al minuto
+  from_state INTEGER, to_state INTEGER NOT NULL, flags INTEGER NOT NULL,
+  confirmations INTEGER NOT NULL, absences INTEGER NOT NULL, near_absences INTEGER NOT NULL,
+  cause TEXT NOT NULL             -- report | hold | ttl | window | freeze | admin
+);                                -- NESSUNA rkey/pkey: non contiene dati personali
 ```
 
 ### 5.4 Cosa NON è salvato da nessuna parte
@@ -214,18 +221,22 @@ Pseudocodice per una coppia (distributore, carburante):
 ```
 R ← segnalazioni ultime 8 h, tenendo per ogni rkey solo l'ULTIMA
 se R vuoto                                     → GRIGIO
-lastPos ← ts massimo tra le presenze (o null)
+lastPos ← ts massimo tra le presenze (o null)    lastNeg ← ts massimo tra le assenze (o null)
 neg     ← assenze con ts > lastPos (tutte se lastPos = null)
-pos45   ← presenze con ts > now − FRESH
+pos45   ← presenze con ts > lastNeg e ts > now − FRESH        // v0.3.2 (A): simmetria
+wasGreen← pesoConCap(presenze fresche, anche precedenti alle assenze) ≥ GREEN_MIN
 negW    ← pesoConCap(neg)        // Σ pesi, con il contributo di ogni pkey limitato a CAP_PREFIX
 posW45  ← pesoConCap(pos45)
 
-se negW ≥ RED_MIN e ∃ assenza near in neg                           → ROSSO
-se posW45 ≥ GREEN_MIN e negW = 0                                     → VERDE (conferme = |pos45|)
-se posW45 ≥ GREEN_MIN e negW > 0                                     → AMBRA (contrastante, flag 2)
-se negW > 0                                                          → AMBRA (assenza da verificare, flag 4)
-se lastPos ≠ null                                                    → AMBRA (da verificare, età = now − lastPos)
+se negW ≥ RED_MIN e ∃ assenza near in neg:
+    se now − max(neg.ts) > RED_TTL                                   → AMBRA (rosso scaduto, flag 16)   // B
+    se now − min(neg.ts) < RED_HOLD                                  → AMBRA (rosso in verifica, flag 8) // C
+    altrimenti                                                       → ROSSO
+se posW45 ≥ GREEN_MIN                                                → VERDE (conferme = |pos45|)
+se negW > 0                                                          → AMBRA (wasGreen ? contrastante, flag 2 : assenza da verificare, flag 4)
+altrimenti (lastPos ≠ null garantito)                                → AMBRA (da verificare, età = now − lastPos)
 ```
+Parametri aggiunti in v0.3.2 (ADR-0011): `RED_HOLD = 10 min`, `RED_TTL = 90 min`. Il risultato include anche `absences` e `lastAbsenceMs` per le etichette (`src/domain/labels.ts`).
 Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 
 **Score e affidabilità (ibrido A + C):** `score = logistic(Σ ± w_i · cap · e^(−età_i / τ))`, con τ tale che il dimezzamento avvenga a `FRESH`/1,5. Le soglie dello score per i 3 livelli di affidabilità sono da tarare con i test e i dati reali. Lo score **non cambia lo stato**: serve solo per l'ordinamento secondario e per l'indicatore.
@@ -243,7 +254,7 @@ Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 | Più di 3 segnalazioni dalla stessa `rkey` sullo stesso distributore in 45' | `abuse.level++`, timeout di `2^level` minuti (massimo 24 h) |
 | Più di 20 segnalazioni/ora dalla stessa `rkey` (su distributori diversi) | `abuse.level++`: un'auto non visita 20 distributori in un'ora |
 | Più di 120 segnalazioni/ora per `pkey` (RateLimit binding, globale) | scarto silenzioso. Soglia alta per via del CGNAT |
-| Raffica: più di 4 assenze da `pkey` diverse entro 5' su un distributore verde | flag "contrastante" + difficoltà PoW ×4 su quel distributore per 1 h + notifica ai maintainer |
+| Raffica: un distributore entra in "rosso in verifica" (flag 8, tutte le assenze negli ultimi 10') | difficoltà PoW ×4 su quel distributore per 1 h + **notifica immediata ai maintainer**, che in 10 minuti possono congelarlo (ADR-0011 C) |
 
 ## 9. Interfacce (API)
 
