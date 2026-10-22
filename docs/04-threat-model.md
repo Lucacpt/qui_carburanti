@@ -42,7 +42,7 @@
 
 ### P1 — "Spegnere" un distributore concorrente (T2) → A1
 **Obiettivo:** distributore X in ✕ rosso per tutto il pomeriggio.
-1. *Ricognizione:* legge il codice open source e scopre le soglie (v0.3: rosso = peso di assenze ≥ 2,0 con almeno 1 `near`, da 2 prefissi diversi).
+1. *Ricognizione:* legge il codice open source e scopre le soglie (v0.3.1: rosso = peso di assenze ≥ 3,0 con almeno 1 `near`, quindi da almeno 3 prefissi diversi).
 2. *Esecuzione semplice:* dal telefono segnala "Non c'è" con `near=true` (il flag è falsificabile). **Dalla v0.3 ottiene solo ambra "assenza da verificare"**, non più il rosso.
 3. *Esecuzione robusta:* attiva e disattiva la modalità aereo per ottenere un nuovo IP CGNAT, cancella `localStorage` (nuovo token), risolve il PoW e ripete. Con 2 prefissi diversi supera anche le conferme recenti, se queste valgono meno di 2,0.
 4. *Mantenimento:* ripete ogni 40 minuti.
@@ -58,7 +58,7 @@
 
 ### P2 — Verde falso per attirare clienti (T2, T1) → A1
 Simmetrico a P1. È **più dannoso** per gli utenti: si fanno chilometri inutili.
-**Difese:** verde solo con ≥ 2,0 da almeno 2 prefissi diversi (`CAP_PREFIX`); decadimento dopo 45'; chi arriva sul posto e trova vuoto segnala "Non c'è", e lo stato passa a contrastante.
+**Difese:** verde solo con ≥ 3,0 da almeno 3 prefissi diversi (`CAP_PREFIX`, v0.3.1); decadimento dopo 45'; chi arriva sul posto e trova vuoto segnala "Non c'è", e lo stato passa a contrastante.
 **Rischio residuo: MEDIO.**
 
 ### P3 — Brigading coordinato (T3) → A1, A5

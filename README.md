@@ -28,6 +28,20 @@ Tutto il design è in [`docs/`](docs/README.md). Per orientarsi conviene partire
 ## Stack
 Cloudflare Workers + Static Assets · Durable Objects (SQLite) · TypeScript · nessun framework lato client · anagrafica impianti MIMIT.
 
+## Provarlo in locale
+Requisiti: Node.js 24 (con npm 11, incluso in Node 24).
+
+```sh
+npm ci --ignore-scripts      # installa senza eseguire script delle dipendenze
+npm run import:mimit         # scarica l'anagrafica MIMIT della provincia di Avellino
+npm run dev                  # avvia QUI su http://localhost:8787 (nessun account Cloudflare necessario)
+npm test                     # test
+```
+
+Altri comandi: `npm run lint`, `npm run typecheck`, `npm run privacy-guard` (cerca nel codice cookie, fingerprinting o richieste a terzi), `npm run budget` (peso degli asset).
+
+Vuoi accedere all'ambiente di prova o aiutarci a testare? Apri una [issue](https://github.com/Lucacpt/qui_carburanti/issues).
+
 ## Licenza
 Codice: [EUPL-1.2](LICENSE) ([testo ufficiale in italiano](https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32017D0863)).
 Cosa comporta: puoi usare, studiare, modificare e ridistribuire il codice. Se distribuisci o **offri come servizio web** una versione modificata, devi renderne pubblico il codice sotto la stessa licenza (o una compatibile).

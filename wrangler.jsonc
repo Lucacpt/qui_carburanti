@@ -1,0 +1,16 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "qui",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "public",
+    "binding": "ASSETS",
+    // /d/<id> e le altre rotte del client servono index.html
+    "not_found_handling": "single-page-application",
+    // solo le API passano dal Worker: gli asset statici restano gratuiti
+    "run_worker_first": ["/api/*"]
+  },
+  // Niente log applicativi in produzione (NFR-PR6). Si riattivano solo per il debug.
+  "observability": { "enabled": false }
+}

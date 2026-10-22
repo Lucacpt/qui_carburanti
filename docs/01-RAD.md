@@ -74,8 +74,9 @@ Una PWA leggera, servita dall'edge Cloudflare. Mostra una lista di distributori 
 | **FR-20** | Statistiche aggregate pubbliche (CSV orario per provincia) | COULD |
 | **FR-21** | Dopo una segnalazione di presenza, domande facoltative e saltabili: **coda** (nessuna / < 15' / > 15') e **limite di erogazione** (sì/no). Mostrate in lista e nel dettaglio | MUST (v0.3) |
 | **FR-22** | Notifiche push "avvisami quando torna disponibile" su una lista di distributori, **senza GPS continuo**, con scadenza a 48 h (ADR-0009) | SHOULD (giorno 4-5) |
-| **FR-23** | Indicatore di affidabilità a 3 livelli accanto allo stato (ADR-0006, ibrido) | SHOULD |
+| **FR-23** | Indicatore di affidabilità a 3 livelli accanto allo stato (ADR-0006, ibrido) | MUST (MVP) |
 | **FR-24** | Avviso informativo una tantum alla prima segnalazione (token anti-spam), nessun banner di consenso (ADR-0005) | MUST |
+| **FR-25** | Pagina `/progetto`, linkata nel footer di ogni pagina: scopo del progetto, **solo informativo e senza fini di lucro**, codice open source (link alla repo), come provarlo in locale e come chiedere l'accesso all'ambiente di prova | MUST (MVP) |
 
 ### 3.3 Requisiti non funzionali
 

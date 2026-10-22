@@ -204,9 +204,9 @@ Il DO tiene lo snapshot in memoria e lo ricalcola solo se "dirty" o se è scadut
 Parametri (default in `domain/config.ts`; `FRESH` e le soglie sono sovrascrivibili a runtime dalla tabella `config`, senza redeploy):
 ```
 FRESH      = 45 min        WINDOW   = 8 h
-W_NEAR     = 1.0           W_REMOTE = 0.5
+W_NEAR     = 1.0           W_REMOTE = 0.25    (v0.3.1: 4 segnalazioni remote = 1 sul posto)
 CAP_PREFIX = 1.0           // contributo massimo di un singolo prefisso IP a uno stato
-GREEN_MIN  = 2.0           RED_MIN  = 2.0   + almeno 1 assenza near   (v0.3: niente più rosso "non contrastato" a 1,0)
+GREEN_MIN  = 3.0           RED_MIN  = 3.0   + almeno 1 assenza near   (v0.3.1: +1 persona; v0.3: niente più rosso "non contrastato")
 QUEUE_WINDOW = 30 min      // finestra di aggregazione di coda e limite
 ```
 
