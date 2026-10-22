@@ -27,3 +27,7 @@
 | [0008](adr/ADR-0008-licenza-eupl.md) | EUPL-1.2 per il codice | Accepted |
 | [0009](adr/ADR-0009-notifiche-push.md) | Push senza GPS continuo, scadenza 48 h | Accepted (giorno 4-5) |
 | [0010](adr/ADR-0010-dominio.md) | Dominio `qui-carburanti.it` | Accepted |
+| [0011](adr/ADR-0011-tutele-gestori.md) | Tutele per gestori e maintainer (rosso in verifica, scadenza, registro, etichette) | Accepted |
+
+## Procedure
+- [Segnalare un errore o contestare un'informazione](procedure/contestazioni.md)

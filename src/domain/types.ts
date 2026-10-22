@@ -9,7 +9,19 @@ export const State = { GREY: 0, RED: 1, AMBER: 2, GREEN: 3 } as const;
 export type State = (typeof State)[keyof typeof State];
 
 /** Flag a bit che spiegano *perché* uno stato è ambra o congelato. */
-export const Flag = { NONE: 0, FROZEN: 1, CONTESTED: 2, SINGLE_ABSENCE: 4 } as const;
+export const Flag = {
+  NONE: 0,
+  /** Stato fissato dai maintainer (es. contestazione del gestore). Impostato dal Durable Object. */
+  FROZEN: 1,
+  /** Era verde, poi sono arrivate assenze non ancora sufficienti per il rosso. */
+  CONTESTED: 2,
+  /** Assenze segnalate ma non sufficienti per il rosso (poche, o nessuna sul posto). */
+  SINGLE_ABSENCE: 4,
+  /** Assenze sufficienti per il rosso, ma arrivate tutte negli ultimi `redHoldMs`: rosso in verifica. */
+  RED_PENDING: 8,
+  /** Era rosso, ma l'ultima assenza è più vecchia di `redTtlMs`: il distributore può essere stato rifornito. */
+  RED_EXPIRED: 16,
+} as const;
 
 /** Una segnalazione, così come la vede il dominio (già validata e anonimizzata dal Worker). */
 export interface Report {
@@ -31,6 +43,10 @@ export interface StateResult {
   readonly confirmations: number;
   /** Ora dell'ultima conferma di presenza (epoch ms), se esiste nella finestra. */
   readonly lastConfirmMs: number | null;
+  /** Segnalatori distinti che hanno segnalato l'assenza dopo l'ultima conferma. */
+  readonly absences: number;
+  /** Ora dell'ultima assenza successiva all'ultima conferma (epoch ms), se esiste. */
+  readonly lastAbsenceMs: number | null;
   /** Combinazione di valori `Flag`. */
   readonly flags: number;
 }

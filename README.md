@@ -14,6 +14,13 @@
 
 > ⚠️ **QUI non ha app da scaricare e non chiede mai soldi.** Diffida di APK, "app ufficiali" o raccolte fondi a nome di QUI.
 
+## Una nota personale
+**Questo progetto è stato scritto con l'intelligenza artificiale.** Analisi, documentazione e gran parte del codice sono nati lavorando insieme a un assistente IA (Claude di Anthropic, tramite Claude Code). Le scelte finali le ho prese io, ma voglio che sia chiaro a chiunque legga il codice.
+
+La maggior parte dei miei repository è privata: questo è uno dei pochi pubblici. L'ho reso pubblico perché **non considero il mio codice qualcosa di assoluto o definitivo**, e perché un progetto che chiede fiducia alla comunità deve poter essere controllato da tutti.
+
+**Ogni consiglio, critica o correzione è ben accetto: sono disposto a imparare.** Apri pure una [issue](https://github.com/Lucacpt/qui_carburanti/issues) o una pull request, anche solo per dirmi cosa faresti diversamente.
+
 ## Documentazione
 Tutto il design è in [`docs/`](docs/README.md). Per orientarsi conviene partire dal [report v0.3](docs/07-report-v0.3.md).
 

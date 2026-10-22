@@ -77,6 +77,8 @@ Una PWA leggera, servita dall'edge Cloudflare. Mostra una lista di distributori 
 | **FR-23** | Indicatore di affidabilità a 3 livelli accanto allo stato (ADR-0006, ibrido) | MUST (MVP) |
 | **FR-24** | Avviso informativo una tantum alla prima segnalazione (token anti-spam), nessun banner di consenso (ADR-0005) | MUST |
 | **FR-25** | Pagina `/progetto`, linkata nel footer di ogni pagina: scopo del progetto, **solo informativo e senza fini di lucro**, codice open source (link alla repo), come provarlo in locale e come chiedere l'accesso all'ambiente di prova | MUST (MVP) |
+| **FR-26** | Registro anonimo dei cambi di stato (30 giorni, nessun identificativo dei segnalatori) per dimostrare come è nato ogni stato (ADR-0011 D) | MUST |
+| **FR-27** | Etichette descrittive ("Segnalato esaurito da N persone · ultima X fa") e link "Sei il gestore? Segnala un errore" su ogni stato con assenze (ADR-0011 E) | MUST |
 
 ### 3.3 Requisiti non funzionali
 

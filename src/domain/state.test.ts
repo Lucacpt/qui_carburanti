@@ -138,7 +138,7 @@ describe("computeState — tabella dei casi (SDD §8, rev. v0.3.1: soglie a 3 pe
     },
     {
       name: "2 assenze sul posto + 4 remote → rosso (peso 3,0 con almeno una sul posto)",
-      reports: [no(5), no(6), ...[7, 8, 9, 10].map((m) => no(m, { near: false }))],
+      reports: [no(5), no(6), ...[11, 12, 13, 14].map((m) => no(m, { near: false }))],
       state: State.RED,
     },
     {
@@ -166,9 +166,59 @@ describe("computeState — tabella dei casi (SDD §8, rev. v0.3.1: soglie a 3 pe
       flags: Flag.CONTESTED,
     },
     {
-      name: "verde + 3 assenze più recenti → rosso",
-      reports: [yes(20), yes(25), yes(30), no(5), no(6), no(7)],
+      name: "verde + 3 assenze più recenti (da oltre 10') → rosso",
+      reports: [yes(20), yes(25), yes(30), no(12), no(13), no(14)],
       state: State.RED,
+    },
+    // ADR-0011 A — simmetria: dopo un rosso, le conferme vecchie non contano più.
+    {
+      name: "A) rosso + 1 solo 'c'è' → ambra, NON verde",
+      reports: [yes(25), yes(30), yes(35), no(12), no(13), no(14), yes(1)],
+      state: State.AMBER,
+      flags: Flag.NONE,
+      conf: 1,
+    },
+    {
+      name: "A) rosso + 3 'c'è' nuovi da reti diverse → verde",
+      reports: [yes(25), yes(30), yes(35), no(12), no(13), no(14), yes(1), yes(2), yes(3)],
+      state: State.GREEN,
+      conf: 3,
+    },
+    // ADR-0011 B — scadenza del rosso dopo 90' senza nuove assenze.
+    {
+      name: "B) rosso con ultima assenza 89' fa → ancora rosso",
+      reports: [no(89), no(95), no(100)],
+      state: State.RED,
+    },
+    {
+      name: "B) rosso con ultima assenza 91' fa → ambra 'esaurito tempo fa, da verificare'",
+      reports: [no(91), no(95), no(100)],
+      state: State.AMBER,
+      flags: Flag.RED_EXPIRED,
+    },
+    {
+      name: "B) rosso di 7 ore fa → ambra, mai più rosso",
+      reports: [no(420), no(421), no(422)],
+      state: State.AMBER,
+      flags: Flag.RED_EXPIRED,
+    },
+    // ADR-0011 C — rosso in verifica: assenze tutte negli ultimi 10'.
+    {
+      name: "C) 3 assenze in 3 minuti → ambra 'rosso in verifica'",
+      reports: [no(1), no(2), no(3)],
+      state: State.AMBER,
+      flags: Flag.RED_PENDING,
+    },
+    {
+      name: "C) 3 assenze distribuite su 10 minuti → rosso",
+      reports: [no(2), no(5), no(10)],
+      state: State.RED,
+    },
+    {
+      name: "C) rosso in verifica + 1 'c'è' → ambra semplice (la verifica ha funzionato)",
+      reports: [no(3), no(4), no(5), yes(1)],
+      state: State.AMBER,
+      flags: Flag.NONE,
     },
     {
       name: "assenze vecchie superate da conferme recenti → verde",
@@ -215,6 +265,22 @@ describe("computeState — proprietà anti-abuso", () => {
       const neg = Array.from({ length: n }, (_, i) => no(i % 40, { pkey: i % 2 ? "a" : "b" }));
       expect(computeState(pos, NOW).state).not.toBe(State.GREEN);
       expect(computeState(neg, NOW).state).not.toBe(State.RED);
+    }
+  });
+
+  it("dopo un rosso, UNA conferma non porta mai a verde, comunque fossero le conferme precedenti", () => {
+    for (let before = 0; before <= 10; before++) {
+      const old = Array.from({ length: before }, (_, i) => yes(20 + i));
+      const red = [no(15), no(16), no(17)];
+      expect(computeState([...old, ...red], NOW).state).toBe(State.RED);
+      expect(computeState([...old, ...red, yes(1)], NOW).state).toBe(State.AMBER);
+    }
+  });
+
+  it("le tutele del gestore non trasformano mai un rosso in verde", () => {
+    for (let age = 0; age <= 8 * 60; age += 7) {
+      const out = computeState([no(age), no(age + 1), no(age + 2)], NOW);
+      expect(out.state).not.toBe(State.GREEN);
     }
   });
 

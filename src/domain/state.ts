@@ -34,31 +34,62 @@ export function computeState(
   const inWindow = reports.filter((r) => r.ts <= now && now - r.ts <= p.windowMs);
   const recent = latestPerReporter(inWindow);
   if (recent.length === 0) {
-    return { state: State.GREY, confirmations: 0, lastConfirmMs: null, flags: Flag.NONE };
+    return {
+      state: State.GREY,
+      confirmations: 0,
+      lastConfirmMs: null,
+      absences: 0,
+      lastAbsenceMs: null,
+      flags: Flag.NONE,
+    };
   }
 
   const positives = recent.filter((r) => r.has);
-  const lastPos = positives.length > 0 ? Math.max(...positives.map((r) => r.ts)) : null;
-  // Contano solo le assenze successive all'ultima conferma: un "c'è" più recente le supera.
-  const neg = recent.filter((r) => !r.has && (lastPos === null || r.ts > lastPos));
-  const pos45 = positives.filter((r) => now - r.ts <= p.freshMs);
+  const negatives = recent.filter((r) => !r.has);
+  const lastPos = maxTs(positives);
+  const lastNeg = maxTs(negatives);
+  // Simmetria (ADR-0011, A): ogni lato conta solo ciò che è arrivato DOPO l'ultima segnalazione opposta.
+  // Così un "c'è" isolato dopo un rosso non resuscita le conferme vecchie, già smentite.
+  const neg = negatives.filter((r) => lastPos === null || r.ts > lastPos);
+  const pos45 = positives.filter(
+    (r) => (lastNeg === null || r.ts > lastNeg) && now - r.ts <= p.freshMs,
+  );
+  // Conferme fresche precedenti alle assenze: servono solo a dire "era verde, ora è contrastante".
+  const wasGreen =
+    cappedWeight(
+      positives.filter((r) => now - r.ts <= p.freshMs),
+      p,
+    ) >= p.greenMin;
 
   const negW = cappedWeight(neg, p);
   const posW45 = cappedWeight(pos45, p);
   const negNear = neg.some((r) => r.near);
-  const base = { confirmations: pos45.length, lastConfirmMs: lastPos };
+  const base = {
+    confirmations: pos45.length,
+    lastConfirmMs: lastPos,
+    absences: neg.length,
+    lastAbsenceMs: maxTs(neg),
+  };
 
   // Cascata di decisione: vince la prima regola che corrisponde (SDD §8).
-  // 1. Rosso prima del verde: assenze sufficienti e PIÙ RECENTI delle conferme sono l'informazione più fresca.
-  if (negW >= p.redMin && negNear) return { ...base, state: State.RED, flags: Flag.NONE };
-  // 2. Conferme fresche sufficienti; se dopo è arrivata qualche assenza, lo stato è contrastante.
-  if (posW45 >= p.greenMin) {
-    return negW > 0
-      ? { ...base, state: State.AMBER, flags: Flag.CONTESTED }
-      : { ...base, state: State.GREEN, flags: Flag.NONE };
+  // 1. Rosso prima del verde, ma con due tutele per il gestore (ADR-0011, B e C).
+  if (negW >= p.redMin && negNear) {
+    const first = Math.min(...neg.map((r) => r.ts));
+    const last = Math.max(...neg.map((r) => r.ts));
+    if (now - last > p.redTtlMs) return { ...base, state: State.AMBER, flags: Flag.RED_EXPIRED };
+    if (now - first < p.redHoldMs) return { ...base, state: State.AMBER, flags: Flag.RED_PENDING };
+    return { ...base, state: State.RED, flags: Flag.NONE };
   }
+  // 2. Conferme fresche sufficienti, tutte successive all'ultima assenza (quindi negW è 0).
+  if (posW45 >= p.greenMin) return { ...base, state: State.GREEN, flags: Flag.NONE };
   // 3. Assenze non sufficienti per il rosso (poche, o nessuna fatta sul posto).
-  if (negW > 0) return { ...base, state: State.AMBER, flags: Flag.SINGLE_ABSENCE };
+  if (negW > 0) {
+    return { ...base, state: State.AMBER, flags: wasGreen ? Flag.CONTESTED : Flag.SINGLE_ABSENCE };
+  }
   // 4. Solo conferme insufficienti o non fresche. Qui lastPos non è mai null: senza conferme, neg = recent ≠ ∅.
   return { ...base, state: State.AMBER, flags: Flag.NONE };
+}
+
+function maxTs(reports: readonly Report[]): number | null {
+  return reports.length > 0 ? Math.max(...reports.map((r) => r.ts)) : null;
 }
