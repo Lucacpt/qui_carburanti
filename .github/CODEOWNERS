@@ -1,0 +1,6 @@
+# Ogni modifica richiede la revisione del maintainer.
+# Percorsi sensibili: workflow (supply chain), header di sicurezza, identità anonima, algoritmo di stato.
+*                       @Lucacpt
+/.github/               @Lucacpt
+/src/worker/            @Lucacpt
+/src/domain/state.ts    @Lucacpt

@@ -39,7 +39,7 @@ Durante le carenze capita spesso che il gasolio ci sia e la benzina no. Uno stat
 ### 4.4 Quattro stati, non tre
 | Stato | Colore e forma | Significato |
 |---|---|---|
-| Disponibile | ● verde | ≥ 2 conferme indipendenti negli ultimi 45 min |
+| Disponibile | ● verde | ≥ 3 conferme indipendenti negli ultimi 45 min (v0.3.1) |
 | Da verificare | ▲ ambra | 1 sola conferma recente, conferme tra 45 min e 8 h, oppure segnalazioni contrastanti |
 | Segnalato esaurito | ✕ rosso | Segnalazioni di assenza più recenti delle conferme |
 | Nessuna informazione | ○ grigio | Nessuna segnalazione nelle ultime 8 h |

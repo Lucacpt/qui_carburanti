@@ -230,7 +230,10 @@ Posso prepararti la **lettera di presentazione** (1 pagina: cos'è QUI, cosa *no
 - **Attenzione:** il check obbligatorio si chiama `ci`. Esisterà dalla prima PR, che aggiunge il workflow.
 
 ## 10. Domande residue (solo 4)
-1. **Compri `qui-carburanti.it`?** (Sì / No: si parte con workers.dev e si migra dopo.)
-2. **Notifiche al giorno 4-5 invece che nell'MVP:** d'accordo?
-3. **Avviso just-in-time al posto del banner** (§4.3): ti convince?
-4. **Indicatore di affidabilità a 3 livelli al posto della percentuale** (§4.4): d'accordo? L'indicatore entra nell'MVP o al giorno 4-5?
+1. **Compri `qui-carburanti.it`?** (Sì / No: si parte con workers.dev e si migra dopo.) si lo compro
+2. **Notifiche al giorno 4-5 invece che nell'MVP:** Si va bene 
+3. **Avviso just-in-time al posto del banner** (§4.3): ti convince? si va bene 
+4. **Indicatore di affidabilità a 3 livelli al posto della percentuale** (§4.4): d'accordo? L'indicatore entra nell'MVP o al giorno 4-5? si va bene entra nell mvp
+Aggiungiamo però una pagina in cui spieghiamo il progetto e il suo scopo che è a solo scopo informativo e non di lucro, che il codice è open source e che con una richiesta tutti possono provarlo e testarlo. Inseriamo il link alla pagina informativa nel footer del sito. 
+
+> ✅ **Risolte (2026-10-22).** Conseguenze: ADR-0010 → Accepted; FR-23 (affidabilità) → MUST nell'MVP; FR-22 (push) → giorno 4-5; FR-24 (avviso just-in-time) confermato; **nuovo FR-25**: pagina `/progetto` linkata nel footer (scopo informativo, senza fini di lucro, codice aperto, come provarlo e testarlo).

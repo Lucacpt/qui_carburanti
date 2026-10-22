@@ -1,6 +1,6 @@
 # ADR-0010: Dominio `qui-carburanti.it` invece del sottodominio `workers.dev`
 
-**Status:** Proposed (in attesa di conferma del maintainer)
+**Status:** Accepted (2026-10-22: il maintainer acquista `qui-carburanti.it`)
 **Date:** 2026-10-22
 **Deciders:** Luca (maintainer)
 

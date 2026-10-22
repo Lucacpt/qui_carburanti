@@ -37,6 +37,17 @@ Un unico **Worker con Static Assets**, Durable Objects e Cron Triggers, sul **pi
 ### Option C: Pages statico + backend esterno (Supabase/Postgres)
 **Pros:** SQL completo, dashboard. **Cons:** terza parte in più che riceve gli IP, latenza, costo, un'altra superficie d'attacco. **Scartata** per la privacy.
 
+### Option D: Vercel (valutata il 2026-10-22, su richiesta del maintainer)
+| Dimension | Assessment |
+|---|---|
+| Complexity | Media-alta: Vercel non ha un equivalente dei Durable Objects. Lo stato condiviso e atomico richiede un servizio esterno (Upstash Redis dal Marketplace, con script Lua, oppure Postgres) |
+| Cost | Hobby gratuito ma per uso non commerciale e **con limiti rigidi** (1 M invocazioni, 100 GB di traffico al mese; al limite il servizio si ferma, non si paga l'eccedenza). Pro 20 USD/mese per utente + Redis esterno |
+| Scalability | Buona: la CDN di Vercel può cachare le risposte delle funzioni (`s-maxage`) |
+| Team familiarity | Da verificare col maintainer |
+
+**Pros:** preview automatica per ogni PR; ottima esperienza di sviluppo; log e rollback semplici; integrazione Git senza token di deploy nei secret di GitHub.
+**Cons:** **un fornitore in più** (Redis) che riceve dati pseudonimi, da citare nell'informativa e da proteggere con un altro account; latenza di rete verso il database per ogni segnalazione; atomicità dell'anti-abuso da ricostruire a mano (Lua o transazioni) invece di ottenerla gratis dal modello single-thread dei DO; costo 4-5 volte maggiore; traffico statico conteggiato (su Cloudflare gli asset statici sono gratuiti e illimitati).
+
 ## Trade-off Analysis
 B è fattibile ma introduce coordinamento tra due deploy senza alcun vantaggio funzionale. Il piano Paid è la vera decisione: sul Free, il giorno in cui l'app "funziona" (va virale) è anche il giorno in cui smette di funzionare.
 
