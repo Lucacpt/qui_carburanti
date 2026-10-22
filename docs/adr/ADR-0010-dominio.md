@@ -1,6 +1,6 @@
-# ADR-0010: Dominio `qui-carburanti.it` invece del sottodominio `workers.dev`
+# ADR-0010: Dominio `quicarburanti.it` invece del sottodominio `workers.dev`
 
-**Status:** Accepted (2026-10-22: il maintainer acquista `qui-carburanti.it`)
+**Status:** Accepted (2026-10-22: il maintainer acquista `quicarburanti.it`)
 **Date:** 2026-10-22
 **Deciders:** Luca (maintainer)
 
@@ -8,7 +8,7 @@
 Il maintainer ha proposto un sottodominio Cloudflare (`*.workers.dev`) per contenere i costi, con il nome `qui-carburanti`. Il servizio ha bisogno di: cache in lettura, regole WAF anti-abuso, un indirizzo email di contatto (GDPR art. 13, DSA artt. 11-12) e un link ufficiale riconoscibile contro i cloni.
 
 ## Decision
-Registrare **`qui-carburanti.it`** (~10 €/anno), gestirne il DNS su Cloudflare (zona Free) e servire il Worker come *Custom Domain*. Email `contatti@` e `privacy@` tramite Cloudflare Email Routing.
+Registrare **`quicarburanti.it`** (~10 €/anno), gestirne il DNS su Cloudflare (zona Free) e servire il Worker come *Custom Domain*. Email `contatti@` e `privacy@` tramite Cloudflare Email Routing.
 
 ## Options Considered
 
@@ -39,7 +39,7 @@ Il costo del dominio è trascurabile rispetto al piano Paid già accettato. I be
 
 ## Consequences
 - Il codice non cambia: il Worker funziona su entrambi. Si può partire su workers.dev e migrare in giornata.
-- Da rivedere: valutare anche `qui-carburanti.com` per difendersi dal typosquatting.
+- Da rivedere: valutare anche `quicarburanti.com` per difendersi dal typosquatting.
 
 ## Action Items
 1. [ ] Verificare la disponibilità e registrare il dominio.

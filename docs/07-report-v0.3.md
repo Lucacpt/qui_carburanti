@@ -10,7 +10,7 @@
 3. **Rosso più prudente**, come hai chiesto: per lo stato "Segnalato esaurito" servono **sempre almeno 2 persone da reti diverse, di cui almeno una sul posto**.
 4. **Coda e limite di erogazione** entrano nell'MVP come domande facoltative dopo la segnalazione. Sono la risposta all'effetto stampede, che hai deciso di accettare.
 5. **Notifiche push: sì, e il GPS non deve restare acceso.** Ti propongo però di rilasciarle al **giorno 4-5**, non nelle prime 72 ore (vedi §3, T1).
-6. **Infrastruttura e organizzazione:** Workers + piano Paid. Per il dominio ti consiglio di comprare `qui-carburanti.it` invece del sottodominio Cloudflare (§3, T2). Lavori come privato e unico maintainer: serve qualche protezione compensativa (§3, T4).
+6. **Infrastruttura e organizzazione:** Workers + piano Paid. Per il dominio ti consiglio di comprare `quicarburanti.it` invece del sottodominio Cloudflare (§3, T2). Lavori come privato e unico maintainer: serve qualche protezione compensativa (§3, T4).
 7. **I tuoi commenti negli ADR:** licenza **EUPL-1.2** adottata. Banner cookie: **no al consenso, sì a un avviso just-in-time** (§4.3). Percentuale di presenza: **sì al punteggio continuo, ma mostrato come affidabilità a 3 livelli** (§4.4).
 
 ## 2. Registro delle decisioni
@@ -38,7 +38,7 @@
 | 19 | Raggio 150 m | OK + "come scelgo il distributore senza GPS?" | Risposta nel §4.2 | — |
 | 20 | Pages o Workers | Workers | ADR-0001 → Accepted | ADR-0001 |
 | 21 | Budget | Paid sì, dominio: sottodominio Cloudflare | **Da riconsiderare** (T2) | ADR-0010 |
-| 22 | Nome | qui-carburanti.it | Il DNS non mostra record NS: probabilmente libero, da verificare con un registrar | ADR-0010 |
+| 22 | Nome | quicarburanti.it | Il DNS non mostra record NS: probabilmente libero, da verificare con un registrar | ADR-0010 |
 | 23 | Account Cloudflare | Solo quello privato | Accettabile con 2FA + token con scope minimo (§3, T4) | ADR-0001 |
 | 24 | Mappa nella v1 | No | ADR-0004: mappa in Fase 2 | ADR-0004 |
 | 25 | Esperienza | JS/TS sì, Workers no | Spiego i concetti Workers e DO man mano; scrivi tu la logica di dominio | §6 |
@@ -61,7 +61,7 @@ Sono 1-2 giorni di lavoro. Se entrano nelle prime 72 ore, rischiamo di andare on
 **Proposta:** MVP (giorno 3) senza push → **push al giorno 4-5**, se la crisi è ancora in corso. Il design è già pronto (ADR-0009), quindi non si perde nulla.
 
 ### T2 — Sottodominio `workers.dev` o dominio proprio
-| | `qui-carburanti.<tuoaccount>.workers.dev` | `qui-carburanti.it` (~10 €/anno) |
+| | `qui-carburanti.<tuoaccount>.workers.dev` | `quicarburanti.it` (~10 €/anno) |
 |---|---|---|
 | **Cache API** (lettura da CDN) | Probabilmente **non funziona** su workers.dev: la cache è a livello di zona. Ogni lettura arriverebbe al Durable Object | ✅ |
 | **Regole WAF / rate limiting / "Under Attack"** | ❌ Richiedono una zona | ✅ |
@@ -77,7 +77,7 @@ Nei gruppi social l'informazione corre veloce, e così i cloni e le smentite. Se
 ### T4 — Privato, unico maintainer, nessun legale prima del lancio
 È una configurazione accettabile **per una settimana di crisi**, a queste condizioni minime (non negoziabili, secondo me):
 1. **2FA** su GitHub e Cloudflare (meglio una chiave hardware o una passkey) e token Cloudflare per la CI con scope *solo Workers* sul tuo account.
-2. **Email dedicata** al progetto (`contatti@qui-carburanti.it`). **Non usare l'email aziendale**: collegherebbe la tua azienda al progetto (rischio L10).
+2. **Email dedicata** al progetto (`contatti@quicarburanti.it`). **Non usare l'email aziendale**: collegherebbe la tua azienda al progetto (rischio L10).
 3. Informativa, termini e pagina contatti online **dal giorno 1** (te le preparo io come bozza).
 4. **Kill switch** (sola lettura) pronto e testato prima del lancio.
 5. Etichetta **"Beta"** visibile + disclaimer "Informazioni degli utenti, non verificate. Non è una fonte ufficiale".
@@ -230,7 +230,7 @@ Posso prepararti la **lettera di presentazione** (1 pagina: cos'è QUI, cosa *no
 - **Attenzione:** il check obbligatorio si chiama `ci`. Esisterà dalla prima PR, che aggiunge il workflow.
 
 ## 10. Domande residue (solo 4)
-1. **Compri `qui-carburanti.it`?** (Sì / No: si parte con workers.dev e si migra dopo.) si lo compro
+1. **Compri `quicarburanti.it`?** (Sì / No: si parte con workers.dev e si migra dopo.) si lo compro
 2. **Notifiche al giorno 4-5 invece che nell'MVP:** Si va bene 
 3. **Avviso just-in-time al posto del banner** (§4.3): ti convince? si va bene 
 4. **Indicatore di affidabilità a 3 livelli al posto della percentuale** (§4.4): d'accordo? L'indicatore entra nell'MVP o al giorno 4-5? si va bene entra nell mvp

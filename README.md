@@ -40,9 +40,11 @@ Requisiti: Node.js 24 (con npm 11, incluso in Node 24).
 
 ```sh
 npm ci --ignore-scripts      # installa senza eseguire script delle dipendenze
-npm run import:mimit         # scarica l'anagrafica MIMIT della provincia di Avellino
+cp .dev.vars.example .dev.vars   # segreti di sviluppo (il file è ignorato da git)
+npm run import:mimit         # aggiorna l'anagrafica MIMIT della provincia di Avellino
 npm run dev                  # avvia QUI su http://localhost:8787 (nessun account Cloudflare necessario)
-npm test                     # test
+npm test                     # test unitari (dominio, PoW, logica del Durable Object su SQLite)
+npm run smoke                # con `npm run dev` attivo: prova le API end-to-end
 ```
 
 Altri comandi: `npm run lint`, `npm run typecheck`, `npm run privacy-guard` (cerca nel codice cookie, fingerprinting o richieste a terzi), `npm run budget` (peso degli asset).

@@ -12,7 +12,7 @@
 2. Scegli il motivo: *Ho carburante* · *Non ho carburante* · *Impianto chiuso* · *Dati dell'impianto sbagliati* · *Altro*.
 3. Facoltativo: un contatto (email o telefono) se vuoi una risposta. Lo usiamo **solo** per rispondere e lo cancelliamo dopo 30 giorni.
 
-In alternativa: email a `contatti@qui-carburanti.it` (attiva quando il dominio sarà operativo).
+In alternativa: email a `contatti@quicarburanti.it` (attiva quando il dominio sarà operativo).
 
 ## Cosa facciamo e in quanto tempo
 | Situazione | Tempo di presa in carico | Azione |
@@ -32,4 +32,4 @@ In alternativa: email a `contatti@qui-carburanti.it` (attiva quando il dominio s
 Ogni contestazione viene annotata (data, impianto, motivo, azione presa, tempi) per 6 mesi, senza il contatto facoltativo, che viene cancellato dopo 30 giorni.
 
 ## Autorità
-Le richieste delle autorità (Prefettura, Protezione Civile, forze dell'ordine) si inviano a `contatti@qui-carburanti.it`, oggetto "AUTORITÀ". Rispondiamo con la massima priorità. Per richieste di dati: QUI non conserva indirizzi IP, posizioni o identificativi dei segnalatori.
+Le richieste delle autorità (Prefettura, Protezione Civile, forze dell'ordine) si inviano a `contatti@quicarburanti.it`, oggetto "AUTORITÀ". Rispondiamo con la massima priorità. Per richieste di dati: QUI non conserva indirizzi IP, posizioni o identificativi dei segnalatori.

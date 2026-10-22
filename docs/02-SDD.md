@@ -83,9 +83,11 @@ File `r/<PROV>.<hash8>.json`, servito con `Cache-Control: public, max-age=315360
 {
   "v": 1, "t": 1761130200,          // ora server (epoch s), arrotondata al minuto
   "ro": false,                      // modalità sola lettura attiva?
-  // solo coppie con stato ≠ grigio.
-  // [idImpianto, fuel, stato, conferme45, etàMin(bucket 5'), flags, affidabilità, coda, limite]
-  "s": [[12345, "B", 3, 4, 5, 0, 3, 2, 0], [12345, "G", 1, 0, 120, 2, 1, 0, 0]]
+  // solo coppie con stato ≠ grigio (v0.3.2: aggiunta la colonna "assenze").
+  // [idImpianto, fuel, stato, conferme, assenze, etàMin(bucket 5'), flags, affidabilità, coda, limite]
+  "s": [[12345, "B", 3, 4, 0, 5, 0, 3, 2, 0], [12345, "G", 1, 0, 3, 15, 0, 2, 0, 0]],
+  // impianti congelati con la nota attribuita (procedura contestazioni)
+  "fz": [[12345, "Il gestore segnala: rifornimento alle 14:20"]]
 }
 ```
 - Stato: `0` grigio, `1` rosso, `2` ambra, `3` verde. Flag: `1` congelato dal maintainer, `2` contrastante, `4` assenza da verificare, `8` rosso in verifica, `16` rosso scaduto (ADR-0011).
@@ -125,8 +127,8 @@ CREATE TABLE transitions (        -- ADR-0011 D: registro anonimo dei cambi di s
   station INTEGER NOT NULL, fuel TEXT NOT NULL,
   ts INTEGER NOT NULL,            -- arrotondato al minuto
   from_state INTEGER, to_state INTEGER NOT NULL, flags INTEGER NOT NULL,
-  confirmations INTEGER NOT NULL, absences INTEGER NOT NULL, near_absences INTEGER NOT NULL,
-  cause TEXT NOT NULL             -- report | hold | ttl | window | freeze | admin
+  confirmations INTEGER NOT NULL, absences INTEGER NOT NULL,
+  cause TEXT NOT NULL             -- report | hold | ttl | window | fresh | time | freeze
 );                                -- NESSUNA rkey/pkey: non contiene dati personali
 ```
 
@@ -345,7 +347,8 @@ cron ──▶ scorecard.yml (OpenSSF) · dependabot (settimanale, raggruppato) 
 |---|---|---|
 | Unit | Algoritmo di stato: tabella di casi (ogni transizione del §3.4.4 del RAD), pesi, cap prefisso, confini 45'/8 h | Vitest |
 | Property | "Una sola `pkey` non cambia mai uno stato da grigio a verde", "lo stato è monotono rispetto all'aggiunta di presenze" | fast-check |
-| Integration | DO reale in Miniflare: dedupe, timeout progressivo, purge 8 h (orologio finto), anti-replay PoW | vitest-pool-workers |
+| Integration | Logica del DO (`ProvinceStore`) su SQLite reale: dedupe, timeout progressivo, purge 8 h, anti-replay PoW, registro anonimo, congelamento | Vitest + `node:sqlite` (stesso motore dei DO). `vitest-pool-workers` 0.23 supporta solo Vitest 4: da adottare quando supporterà Vitest 5 |
+| Smoke E2E | Worker + DO + asset nel runtime Cloudflare locale (`wrangler dev`): PoW, rifiuto coordinate, snapshot/ETag/304, contestazioni | `scripts/smoke.ts`, job `smoke` in CI |
 | Privacy | Nessuna colonna o log contiene IP; lo schema rifiuta coordinate; CSP presente su ogni risposta | Vitest |
 | E2E | Cerca → dettaglio → segnala → stato aggiornato | Playwright (1-2 scenari, in staging) |
 | Abuso | Script di carico che simula Sybil da 1 IP con N token: lo stato non deve diventare verde | k6 o script Node, manuale prima del lancio |

@@ -23,8 +23,15 @@ export const Flag = {
   RED_EXPIRED: 16,
 } as const;
 
+/** Coda segnalata insieme a una conferma: 1 nessuna, 2 breve (< 15'), 3 lunga (> 15'). */
+export type Queue = 1 | 2 | 3;
+
 /** Una segnalazione, così come la vede il dominio (già validata e anonimizzata dal Worker). */
 export interface Report {
+  /** Facoltativo, solo con `has = true`. */
+  readonly queue?: Queue | undefined;
+  /** Limite di erogazione segnalato, facoltativo, solo con `has = true`. */
+  readonly limit?: boolean | undefined;
   /** true = "c'è carburante", false = "non c'è". */
   readonly has: boolean;
   /** Il client dichiara di essere entro ~150 m dal distributore. Non verificabile dal server. */
