@@ -357,6 +357,50 @@ fieldset {
 .page h3 {
   margin-bottom: 0.25rem;
 }
+.page h4 {
+  margin: 1rem 0 0.25rem;
+}
+.page code {
+  font-size: 0.875em;
+  overflow-wrap: anywhere;
+}
+.tldr {
+  padding: 4px 16px;
+  border: 2px solid var(--brand);
+  border-radius: 14px;
+  background: var(--card);
+}
+.tldr ul {
+  padding-left: 1.1rem;
+}
+.table-wrap {
+  overflow-x: auto;
+}
+.page table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.page th,
+.page td {
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--line);
+}
+.data-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.data-list li {
+  padding: 10px 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow-wrap: anywhere;
+}
 .foot {
   padding: 16px;
   border-top: 1px solid var(--line);
@@ -365,5 +409,11 @@ fieldset {
   text-align: center;
 }
 .foot p {
+  margin: 0.25rem 0;
+}
+.legal .card {
+  margin: 10px 0;
+}
+.legal .card p {
   margin: 0.25rem 0;
 }

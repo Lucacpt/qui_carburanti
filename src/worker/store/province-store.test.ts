@@ -127,6 +127,19 @@ describe("ProvinceStore — manutenzione e conservazione dei dati", () => {
     store.maintenance(T0 + 31 * 24 * 60 * MIN);
     expect(rows<{ contact: string | null }>("SELECT contact FROM contests")[0]?.contact).toBeNull();
   });
+
+  it("contestazioni e avvisi spariscono dopo 180 giorni, come scritto nell'informativa", () => {
+    store.contest(
+      { prov: "AV", id: STATION, fuel: undefined, reason: "other", contact: undefined, pow: "" },
+      T0,
+    );
+    store.maintenance(T0 + 179 * 24 * 60 * MIN);
+    expect(rows("SELECT * FROM contests")).toHaveLength(1);
+    expect(rows("SELECT * FROM alerts")).toHaveLength(1);
+    store.maintenance(T0 + 180 * 24 * 60 * MIN);
+    expect(rows("SELECT * FROM contests")).toHaveLength(0);
+    expect(rows("SELECT * FROM alerts")).toHaveLength(0);
+  });
 });
 
 describe("ProvinceStore — snapshot e congelamento", () => {

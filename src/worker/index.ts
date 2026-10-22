@@ -23,11 +23,20 @@ const provinces = (env: Env) =>
     .map((p) => p.trim())
     .filter(Boolean);
 
-/** In produzione i dati restano in UE (giurisdizione "eu"); in locale workerd non la supporta. */
-function province(env: Env, prov: string) {
+/**
+ * In produzione segnalazioni e chiave del giorno restano in UE (giurisdizione "eu"), come dice
+ * l'informativa privacy. In locale workerd non supporta le giurisdizioni.
+ */
+function located<T extends Rpc.DurableObjectBranded | undefined>(
+  env: Env,
+  ns: DurableObjectNamespace<T>,
+): DurableObjectNamespace<T> {
   const j = env.DO_JURISDICTION;
-  const ns =
-    j && j !== "none" ? env.PROVINCE.jurisdiction(j as DurableObjectJurisdiction) : env.PROVINCE;
+  return j && j !== "none" ? ns.jurisdiction(j as DurableObjectJurisdiction) : ns;
+}
+
+function province(env: Env, prov: string) {
+  const ns = located(env, env.PROVINCE);
   return ns.get(ns.idFromName(prov));
 }
 
@@ -35,7 +44,8 @@ let dayKeyCache: { day: string; key: string } | undefined;
 async function dayKey(env: Env, now: number): Promise<string> {
   const today = new Date(now).toISOString().slice(0, 10);
   if (dayKeyCache?.day !== today) {
-    dayKeyCache = await env.KEYS.get(env.KEYS.idFromName("global")).dayKey();
+    const ns = located(env, env.KEYS);
+    dayKeyCache = await ns.get(ns.idFromName("global")).dayKey();
   }
   return dayKeyCache.key;
 }

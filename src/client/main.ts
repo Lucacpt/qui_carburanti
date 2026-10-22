@@ -15,15 +15,18 @@ import {
 } from "./data.ts";
 import { centroid, distanceKm, formatDistance, NEAR_KM, type Point } from "./geo.ts";
 import {
+  clearStoredData,
   currentToken,
   incrementHelped,
   mapsApp,
   markNoticeSeen,
   newToken,
   noticeSeen,
+  STORAGE_KEYS,
   savedFuel,
   saveFuel,
   setMapsApp,
+  storedData,
 } from "./local.ts";
 import { directionsUrl, MAPS_APPS, type MapsApp, parseStationPath, stationPath } from "./nav.ts";
 import { matches, normalize } from "./search.ts";
@@ -34,6 +37,7 @@ const REFRESH_MS = 90_000;
 const PAGE = 40;
 const PROCEDURE_URL =
   "https://github.com/Lucacpt/qui_carburanti/blob/main/docs/procedure/contestazioni.md";
+const DATA_PATH = "/dati";
 
 type FuelFilter = Fuel | "all";
 
@@ -563,7 +567,20 @@ function openReport(st: Station, fuel: Fuel, has: boolean): void {
         {},
         "Per evitare lo spam, QUI salva sul tuo telefono un codice casuale che cambia ogni giorno. Nessun cookie, nessun tracciamento.",
       ),
-      h("p", {}, h("a", { href: "/come-funziona" }, "Come funziona")),
+      h(
+        "p",
+        {},
+        "Segnala solo ciò che hai visto e mai mentre guidi. Inviando accetti i ",
+        h("a", { href: "/termini" }, "Termini d'uso"),
+        ".",
+      ),
+      h(
+        "p",
+        {},
+        h("a", { href: "/come-funziona" }, "Come funziona"),
+        " · ",
+        h("a", { href: "/privacy" }, "Privacy"),
+      ),
       h(
         "button",
         {
@@ -623,7 +640,8 @@ function openContest(st: Station): void {
     h(
       "p",
       { class: "muted small" },
-      "Il contatto serve solo per risponderti e viene cancellato dopo 30 giorni.",
+      "Il contatto serve solo per risponderti e viene cancellato dopo 30 giorni. ",
+      h("a", { href: "/privacy#contestazioni" }, "Informativa privacy"),
     ),
     h(
       "button",
@@ -639,7 +657,11 @@ function openContest(st: Station): void {
           const res = await sendContest(PROV, { id: st.id, reason, ...(c ? { contact: c } : {}) });
           sheet.body.replaceChildren(
             res.ok
-              ? h("p", { class: "ok" }, "Grazie. Durante l'emergenza rispondiamo entro 4 ore.")
+              ? h(
+                  "p",
+                  { class: "ok" },
+                  "Grazie. Durante l'emergenza cerchiamo di rispondere entro 4 ore (dalle 8 alle 22).",
+                )
               : h("p", { class: "err" }, res.message),
             h(
               "p",
@@ -659,9 +681,93 @@ function openContest(st: Station): void {
   );
 }
 
+// ------------------------------------------------------------------ i tuoi dati
+
+function dataValue(key: string, value: string): string {
+  if (key === STORAGE_KEYS.token) {
+    const [day, token] = value.split("|");
+    return `${token ?? ""} — creato il ${day ?? "?"}, non viene più usato dopo la mezzanotte`;
+  }
+  if (key === STORAGE_KEYS.notice) return value === "1" ? "sì" : value;
+  if (key === STORAGE_KEYS.maps) return MAPS_APPS.find((a) => a.id === value)?.label ?? value;
+  if (key === STORAGE_KEYS.fuel) return FUEL_NAMES[value as Fuel] ?? value;
+  return value;
+}
+
+/** Trasparenza pratica: mostra esattamente ciò che è salvato e lo cancella con un tocco. */
+function renderMyData(): HTMLElement {
+  document.title = "I tuoi dati — QUI";
+  const items = storedData();
+  const confirmClear = () => {
+    const sheet = openSheet("Cancellare i dati?");
+    sheet.body.replaceChildren(
+      h("p", {}, "Cancelli tutto ciò che QUI ha salvato su questo telefono. Non si può annullare."),
+      h(
+        "button",
+        {
+          class: "btn no",
+          onClick: () => {
+            clearStoredData();
+            sheet.close();
+            announce("Dati cancellati");
+            render();
+          },
+        },
+        "Sì, cancella",
+      ),
+      h("button", { class: "btn", onClick: sheet.close }, "Annulla"),
+    );
+  };
+  return h(
+    "div",
+    { class: "page" },
+    h(
+      "button",
+      { type: "button", class: "btn back", onClick: () => go("/") },
+      "← Torna alla lista",
+    ),
+    h("h2", {}, "I tuoi dati su questo telefono"),
+    h(
+      "p",
+      {},
+      "QUI non ha account e non sa chi sei. Ecco tutto ciò che ha salvato sul tuo telefono (non sul server):",
+    ),
+    items.length > 0
+      ? h(
+          "ul",
+          { class: "data-list" },
+          ...items.map((i) =>
+            h(
+              "li",
+              {},
+              h("strong", {}, i.label),
+              h("br"),
+              h("span", { class: "muted small" }, dataValue(i.key, i.value)),
+            ),
+          ),
+        )
+      : h("p", { class: "ok" }, "Niente: su questo telefono QUI non ha salvato nulla."),
+    items.length > 0 && h("button", { class: "btn no", onClick: confirmClear }, "Cancella tutto"),
+    h(
+      "p",
+      { class: "muted small" },
+      "Sul server le segnalazioni restano al massimo 8 ore e non contengono né il tuo indirizzo IP né la tua posizione. Dettagli: ",
+      h("a", { href: "/privacy" }, "Informativa privacy"),
+      " · ",
+      h("a", { href: "/cookie" }, "Cookie"),
+      ".",
+    ),
+  );
+}
+
 // ------------------------------------------------------------------ navigazione e aggiornamento
 
 function render(): void {
+  if (location.pathname === DATA_PATH) {
+    app.replaceChildren(renderMyData());
+    renderBanner();
+    return;
+  }
   const id = parseStationPath(location.pathname);
   if (id !== null) {
     app.replaceChildren(renderDetail(id));
@@ -703,10 +809,13 @@ async function refresh(): Promise<void> {
 }
 
 async function init(): Promise<void> {
+  // "I tuoi dati" non dipende dalla rete: si mostra subito, anche offline.
+  if (location.pathname === DATA_PATH) render();
   try {
     ui.stations = await loadStations(PROV);
     ui.byId = new Map(ui.stations.map((s) => [s.id, s]));
   } catch {
+    if (location.pathname === DATA_PATH) return;
     app.replaceChildren(
       h("p", {}, "Impossibile caricare i distributori. Controlla la connessione."),
       h("button", { class: "btn primary", onClick: () => location.reload() }, "Riprova"),

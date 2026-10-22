@@ -298,6 +298,8 @@ Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 - Navigatore: l'utente sceglie l'app (Google Maps, Apple Mappe, `geo:`) e il telefono la ricorda. Nessuna lettura dello user agent.
 - Verificato in emulazione mobile (390 px) con DevTools Protocol: niente scorrimento orizzontale, nessun errore né avviso CSP/Trusted Types in console.
 - **Service worker rimandato** alle notifiche push (giorno 4-5): durante i rilasci rapidi una cache aggressiva mostrerebbe versioni vecchie.
+- **Pagine legali** statiche, leggibili anche senza JavaScript: `/privacy`, `/termini`, `/cookie`. Ogni numero che dipende dal codice è marcato `data-legal` e confrontato con le costanti da `scripts/legal-pages.test.ts`; `scripts/check-legal.ts --strict` blocca il rilascio se restano segnaposto o l'avviso di bozza.
+- **`/dati`** (route della SPA): mostra le chiavi `qui.*` salvate sul dispositivo in forma leggibile e le cancella con un tocco. Funziona anche offline.
 
 ### 10.2 Service worker
 - **Precache:** shell, JS e icone (versione legata all'hash della build).

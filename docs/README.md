@@ -31,3 +31,8 @@
 
 ## Procedure
 - [Segnalare un errore o contestare un'informazione](procedure/contestazioni.md)
+
+## Documenti legali
+- Pagine pubbliche: [informativa privacy](../public/privacy.html), [termini d'uso](../public/termini.html), [cookie](../public/cookie.html)
+- [Registro dei trattamenti](legale/registro-trattamenti.md), con valutazione del legittimo interesse, verifica DPIA e procedura per le violazioni dei dati
+- Coerenza con il codice: `scripts/legal-pages.test.ts`. Segnaposto da compilare prima del rilascio: `npm run legal-check`
