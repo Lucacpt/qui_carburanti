@@ -5,6 +5,7 @@ import { DurableObject } from "cloudflare:workers";
 import type { ContestInput } from "../../domain/input.ts";
 import type { ProvinceRegistry } from "../../domain/mimit.ts";
 import type { Env } from "../env.ts";
+import { assertJurisdiction } from "../jurisdiction.ts";
 import {
   ProvinceStore,
   type ReportStatus,
@@ -22,6 +23,7 @@ export class ProvinceDO extends DurableObject<Env> {
 
   constructor(ctx: DurableObjectState, env: Env) {
     super(ctx, env);
+    assertJurisdiction(ctx.id, env);
     this.store = new ProvinceStore(ctx.storage.sql as unknown as SqlLike);
     void ctx.blockConcurrencyWhile(async () => this.store.migrate());
   }

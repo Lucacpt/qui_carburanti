@@ -13,6 +13,10 @@
     // solo le API passano dal Worker: gli asset statici restano gratuiti
     "run_worker_first": ["/api/*"]
   },
+  // Residenza UE (ADR-0012). I Durable Objects sono l'unico archivio di QUI. wrangler non ha un
+  // campo "jurisdiction" per loro: il vincolo è nel codice (src/worker/jurisdiction.ts: namespace
+  // "eu" + ogni oggetto verifica la propria giurisdizione) e scripts/region-policy.test.ts
+  // controlla questo file a ogni PR. Nuovi archivi (KV, D1, R2…) vanno prima verificati lì.
   "durable_objects": {
     "bindings": [
       { "name": "PROVINCE", "class_name": "ProvinceDO" },
@@ -26,7 +30,8 @@
   ],
   "vars": {
     "PROVINCES": "AV",
-    // Dati dei Durable Objects vincolati all'UE. In locale .dev.vars lo sovrascrive con "none" (non supportato).
+    // Obbligatorio "eu" in OGNI ambiente di deploy: le vars non si ereditano tra env, e senza
+    // questa variabile il Worker si ferma. Solo in locale .dev.vars usa "none" (workerd non la supporta).
     "DO_JURISDICTION": "eu",
     // ~50.000 hash SHA-256: circa mezzo secondo su un telefono di fascia media
     "POW_MAX": "50000"
@@ -34,4 +39,7 @@
   // POW_SECRET è un secret: `wrangler secret put POW_SECRET` (in locale: file .dev.vars)
   // Niente log applicativi in produzione (NFR-PR6). Si riattivano solo per il debug.
   "observability": { "enabled": false }
+  // Nessun "placement" di proposito: il Worker gira nel data center più vicino a chi lo usa (in
+  // Italia per chi è in Italia). Il placement per regione è best effort e non garantisce dove
+  // passano i dati; decifrare HTTPS solo nell'UE richiede Regional Services (Enterprise). ADR-0012.
 }

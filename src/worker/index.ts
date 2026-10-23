@@ -5,6 +5,7 @@ import { parseContest, parseReport } from "../domain/input.ts";
 import type { Env } from "./env.ts";
 import { withSecurityHeaders } from "./headers.ts";
 import { anonymousKeys } from "./identity.ts";
+import { located } from "./jurisdiction.ts";
 import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
 
 export { KeyDO } from "./do/keys.ts";
@@ -22,18 +23,6 @@ const provinces = (env: Env) =>
   env.PROVINCES.split(",")
     .map((p) => p.trim())
     .filter(Boolean);
-
-/**
- * In produzione segnalazioni e chiave del giorno restano in UE (giurisdizione "eu"), come dice
- * l'informativa privacy. In locale workerd non supporta le giurisdizioni.
- */
-function located<T extends Rpc.DurableObjectBranded | undefined>(
-  env: Env,
-  ns: DurableObjectNamespace<T>,
-): DurableObjectNamespace<T> {
-  const j = env.DO_JURISDICTION;
-  return j && j !== "none" ? ns.jurisdiction(j as DurableObjectJurisdiction) : ns;
-}
 
 function province(env: Env, prov: string) {
   const ns = located(env, env.PROVINCE);

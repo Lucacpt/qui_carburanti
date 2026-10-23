@@ -28,6 +28,7 @@
 | [0009](adr/ADR-0009-notifiche-push.md) | Push senza GPS continuo, scadenza 48 h | Accepted (giorno 4-5) |
 | [0010](adr/ADR-0010-dominio.md) | Dominio `quicarburanti.it` | Accepted |
 | [0011](adr/ADR-0011-tutele-gestori.md) | Tutele per gestori e maintainer (rosso in verifica, scadenza, registro, etichette) | Accepted |
+| [0012](adr/ADR-0012-residenza-dati-ue.md) | Residenza UE: giurisdizione dei DO fail-closed, autoverifica, politica regionale come test | Accepted |
 
 ## Procedure
 - [Segnalare un errore o contestare un'informazione](procedure/contestazioni.md)
