@@ -19,8 +19,7 @@ export interface SitemapStation {
   readonly lastmod: string;
 }
 
-const escapeXml = (s: string) =>
-  s.replace(/[<>&'"]/g, (c) => `&#${c.charCodeAt(0)};`);
+const escapeXml = (s: string) => s.replace(/[<>&'"]/g, (c) => `&#${c.charCodeAt(0)};`);
 
 function url(loc: string, lastmod?: string): string {
   const mod = lastmod ? `<lastmod>${escapeXml(lastmod)}</lastmod>` : "";
