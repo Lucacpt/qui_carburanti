@@ -5,7 +5,7 @@ import { parseContest, parseReport } from "../domain/input.ts";
 import { handleAdmin } from "./admin.ts";
 import type { Env } from "./env.ts";
 import { withSecurityHeaders } from "./headers.ts";
-import { HttpError, json, readJson } from "./http.ts";
+import { etagMatches, HttpError, json, readJson } from "./http.ts";
 import { anonymousKeys } from "./identity.ts";
 import { located } from "./jurisdiction.ts";
 import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
@@ -119,7 +119,7 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
       );
       ctx.waitUntil(cache.put(cacheKey, res.clone()));
     }
-    if (request.headers.get("If-None-Match") === res.headers.get("ETag")) {
+    if (etagMatches(request.headers.get("If-None-Match"), res.headers.get("ETag"))) {
       return withSecurityHeaders(new Response(null, { status: 304, headers: res.headers }));
     }
     return res;
