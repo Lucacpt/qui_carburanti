@@ -10,6 +10,8 @@ Serve una barra di ricerca per indirizzo. I geocoder remoti (Nominatim pubblico,
 ## Decision
 Ricerca **interamente sul client** su: (a) indirizzo, comune e bandiera dei distributori della provincia (già scaricati); (b) un gazetteer dei comuni della regione con centroidi (dati ISTAT).
 
+**Aggiornamento 2026-10-24 (punto b):** il gazetteer copre i 118 comuni della provincia, con le coordinate di **Wikidata (CC0)**: l'elenco ISTAT non pubblica i centroidi e serve solo a verificare il numero dei comuni. File `public/r/comuni-<PROV>.<hash>.json`, generato da `npm run import:comuni`. Il client lo scarica **solo** quando una ricerca non trova distributori: se il testo indica un comune senza impianti, la lista mostra i distributori più vicini al suo centro, con il loro stato. Nessuna richiesta rivela dove si trova chi cerca.
+
 ## Options Considered
 
 ### Option A: Ricerca locale (scelta)
@@ -38,4 +40,5 @@ Chi cerca carburante cerca "vicino a [comune o zona]", non un civico preciso. Il
 - Da rivedere: aggiungere le frazioni ISTAT se gli utenti le cercano.
 
 ## Action Items
-1. [ ] Normalizzatore di indirizzi con test sulle abbreviazioni MIMIT più comuni.
+1. [x] Normalizzatore di indirizzi con test sulle abbreviazioni MIMIT più comuni.
+2. [x] Gazetteer dei comuni della provincia (Wikidata) e distributori più vicini ai comuni senza impianti.
