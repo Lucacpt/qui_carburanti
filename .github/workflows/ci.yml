@@ -71,5 +71,5 @@ jobs:
       - run: cp .dev.vars.example .dev.vars
       - name: Smoke test end-to-end
         run: |
-          npx wrangler dev --var DEV_ERRORS:1 --port 8787 --ip 127.0.0.1 > wrangler.log 2>&1 &
+          npx wrangler dev --var DEV_ERRORS:1 --port 8787 --ip 127.0.0.1 --local-upstream localhost > wrangler.log 2>&1 &
           node scripts/smoke.ts http://127.0.0.1:8787 || (tail -n 60 wrangler.log; exit 1)

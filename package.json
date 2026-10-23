@@ -9,7 +9,7 @@
     "node": ">=24"
   },
   "scripts": {
-    "dev": "wrangler dev --var DEV_ERRORS:1",
+    "dev": "wrangler dev --var DEV_ERRORS:1 --local-upstream localhost",
     "smoke": "node scripts/smoke.ts",
     "lint": "biome check .",
     "format": "biome check --write .",

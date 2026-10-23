@@ -7,7 +7,7 @@ import { type AccessConfig, accessConfig, type Jwk, verifyAccessJwt } from "./ac
 import { parseAdminAction } from "./admin-input.ts";
 import type { ProvinceDO } from "./do/province.ts";
 import type { Env } from "./env.ts";
-import { HttpError, json, readJson } from "./http.ts";
+import { HttpError, json, notFound, readJson } from "./http.ts";
 
 const JWKS_TTL_MS = 60 * 60_000;
 const JWKS_RETRY_MS = 5 * 60_000;
@@ -68,6 +68,13 @@ export async function handleAdmin(
 ): Promise<Response> {
   try {
     await requireAdmin(request, env, url, now);
+  } catch {
+    // Chi non è autenticato non scopre nulla: né che l'area esiste, né perché è stato respinto
+    // (configurazione mancante, token assente, firma o email non valide).
+    return notFound(NOINDEX);
+  }
+  // Dopo il login i messaggi restano precisi: li legge solo l'admin.
+  try {
     const prov = url.searchParams.get("p") ?? "";
 
     if (url.pathname === "/api/admin/overview" && request.method === "GET") {

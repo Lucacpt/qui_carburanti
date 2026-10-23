@@ -14,8 +14,9 @@
   "assets": {
     "directory": "public",
     "binding": "ASSETS",
-    // /d/<id> e le altre rotte del client servono index.html
-    "not_found_handling": "single-page-application",
+    // Indirizzi inesistenti: 404.html con stato HTTP 404 (niente "soft 404" per i motori di
+    // ricerca, nessun dettaglio a chi sonda). Le pagine dell'app (/d/<id>, /dati) sono in _redirects.
+    "not_found_handling": "404-page",
     // solo le API passano dal Worker: gli asset statici restano gratuiti
     "run_worker_first": ["/api/*"]
   },

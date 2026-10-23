@@ -68,6 +68,9 @@ Senza i tre secret di Access l'area admin resta **chiusa** (503). Sullo staging 
 3. *Actions → Deploy*: aspetta lo staging, poi approva **production**.
 4. Lo smoke test in produzione è in **sola lettura**: controlla salute, intestazioni di sicurezza, sfida PoW, snapshot e chiusura dell'area admin, senza creare segnalazioni.
 
+## Una volta l'anno
+`public/.well-known/security.txt` ha una scadenza obbligatoria (`Expires`, RFC 9116). Un mese prima il test `scripts/security-txt.test.ts` fallisce: sposta la data avanti di un anno al massimo e rilascia.
+
 ## Tornare indietro
 *Workers & Pages → qui → Deployments → Rollback* sulla versione precedente: è immediato. Il rollback riporta il **codice**, non i dati: le segnalazioni già ricevute restano.
 

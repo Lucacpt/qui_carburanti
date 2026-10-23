@@ -11,6 +11,9 @@ export const SECURITY_HEADERS: Readonly<Record<string, string>> = {
   "Strict-Transport-Security": "max-age=63072000; includeSubDomains",
   "X-Content-Type-Options": "nosniff",
   "Cross-Origin-Opener-Policy": "same-origin",
+  // Nessun altro sito può incorporare le nostre risposte (script, JSON, immagini): niente letture
+  // trasversali alla Spectre e niente hotlinking dell'anagrafica.
+  "Cross-Origin-Resource-Policy": "same-origin",
 };
 
 export function withSecurityHeaders(res: Response): Response {

@@ -1,0 +1,5 @@
+# Pagine dell'app servite da index.html (il client legge il percorso). Ogni altro indirizzo
+# inesistente riceve 404.html con stato HTTP 404 (not_found_handling in wrangler.jsonc).
+# Le regole esatte prima di quelle con *: wrangler le valuta più in fretta.
+/dati  /  200
+/d/*   /  200
