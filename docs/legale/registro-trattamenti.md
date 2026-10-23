@@ -12,7 +12,7 @@
 | **Contatto** | privacy@quicarburanti.it |
 | **DPO** | Non designato: nessun monitoraggio regolare e sistematico su larga scala e nessuna categoria particolare di dati (art. 37) |
 | **Perché questo registro** | L'esenzione per chi ha meno di 250 dipendenti (art. 30, par. 5) non si applica, perché il trattamento non è occasionale |
-| **Responsabile del trattamento** | Cloudflare, Inc. e affiliate, con il Data Processing Addendum accettato insieme ai termini del servizio (art. 28) |
+| **Responsabili del trattamento** | Cloudflare, Inc. e affiliate, con il Data Processing Addendum accettato insieme ai termini del servizio (art. 28); Aruba S.p.A. per la posta elettronica del dominio |
 
 I tempi di conservazione citati qui e nell'informativa coincidono con le costanti del codice. Lo verifica il test [`scripts/legal-pages.test.ts`](../../scripts/legal-pages.test.ts): se si cambia una costante senza aggiornare i testi, la CI fallisce.
 
@@ -54,7 +54,7 @@ I tempi di conservazione citati qui e nell'informativa coincidono con le costant
 - **Finalità:** rispondere a utenti, gestori e autorità; gestire le richieste sui diritti (artt. 15-22).
 - **Base giuridica:** obbligo legale (art. 6.1.c) per diritti e autorità; legittimo interesse (art. 6.1.f) negli altri casi.
 - **Dati:** indirizzo email, contenuto, allegati.
-- **Destinatari:** Cloudflare Email Routing (inoltro); fornitore della casella del titolare.
+- **Destinatari:** Aruba S.p.A. (Italia), posta del dominio, come responsabile del trattamento. Cloudflare gestisce solo i record DNS: Email Routing **non** è attivo, perché sostituirebbe i record MX di Aruba.
 - **Conservazione:** 12 mesi dalla chiusura; più a lungo solo per la difesa in giudizio.
 
 ### T6 — Anagrafica degli impianti
