@@ -9,6 +9,7 @@ import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { isWorkerMissing } from "./wrangler-errors.ts";
 
 const target = process.argv[2];
 if (target !== "staging" && target !== "production") {
@@ -39,7 +40,7 @@ function wrangler(args: string[], options: SpawnSyncOptions = {}) {
   });
 }
 
-/** true/false se il Worker esiste; al primo deploy il Worker non c'è ancora (errore 10007). */
+/** Se il Worker ha già POW_SECRET; al primo deploy il Worker non esiste ancora. */
 function hasPowSecret(): boolean {
   const list = wrangler(["secret", "list", "--format", "json"]);
   const out = `${list.stdout ?? ""}${list.stderr ?? ""}`;
@@ -49,7 +50,7 @@ function hasPowSecret(): boolean {
     }[];
     return secrets.some((s) => s.name === "POW_SECRET");
   }
-  if (/10007|does not exist/i.test(out)) return false;
+  if (isWorkerMissing(out)) return false;
   // Qualsiasi altro errore (token, rete): fermarsi, non rigenerare un segreto che forse esiste.
   console.error(out);
   throw new Error("Impossibile leggere i secret del Worker");
