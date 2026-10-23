@@ -1,14 +1,15 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="t">
   <title id="t">QUI</title>
-  <!-- Bozza: dito che punta una X. Arancione #FF6B1A e bianco. Da rifinire con un designer. -->
-  <rect width="512" height="512" rx="112" fill="#FF6B1A"/>
-  <g fill="#fff" stroke="#FF6B1A" stroke-width="8" stroke-linejoin="round">
-    <rect x="216" y="56" width="170" height="156" rx="44"/>
-    <rect x="292" y="176" width="34" height="62" rx="17"/>
-    <rect x="326" y="172" width="34" height="58" rx="17"/>
-    <rect x="356" y="164" width="30" height="52" rx="15"/>
-    <rect x="224" y="140" width="64" height="206" rx="32"/>
-    <rect x="180" y="84" width="62" height="118" rx="31"/>
+  <!-- Mano che indica una X (manicula), arancione #EA580C e bianco: glifo bianco 3,6:1 sullo sfondo. -->
+  <rect width="512" height="512" rx="112" fill="#EA580C"/>
+  <g transform="translate(196 -36) rotate(40) scale(0.76)" fill="#fff" stroke="#EA580C" stroke-width="14" stroke-linejoin="round">
+    <rect x="40" y="196" width="56" height="156" rx="12"/>
+    <rect x="88" y="188" width="180" height="176" rx="64"/>
+    <rect x="228" y="250" width="92" height="52" rx="26"/>
+    <rect x="228" y="298" width="84" height="48" rx="24"/>
+    <rect x="222" y="342" width="72" height="42" rx="21"/>
+    <rect x="180" y="190" width="250" height="60" rx="30"/>
+    <rect x="146" y="232" width="134" height="50" rx="25" transform="rotate(8 146 257)"/>
   </g>
-  <path d="M214 378 L298 462 M298 378 L214 462" stroke="#fff" stroke-width="32" stroke-linecap="round"/>
+  <path d="M382 333L448 399M448 333L382 399" stroke="#fff" stroke-width="30" stroke-linecap="round"/>
 </svg>
