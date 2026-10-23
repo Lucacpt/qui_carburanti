@@ -3,6 +3,8 @@ node_modules/
 public/app.js
 public/pow.js
 public/admin.js
+# generata da scripts/build-sitemap.ts
+public/sitemap.xml
 dist/
 coverage/
 .wrangler/

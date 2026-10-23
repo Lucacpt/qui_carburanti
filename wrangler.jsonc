@@ -9,8 +9,9 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{ "pattern": "quicarburanti.it", "custom_domain": true }],
-  // Costruisce public/app.js e public/pow.js prima di `wrangler dev` e `wrangler deploy`.
-  "build": { "command": "node scripts/build-client.ts" },
+  // Prima di `wrangler dev` e `wrangler deploy`: il client (public/app.js, pow.js, admin.js) e
+  // public/sitemap.xml, generata dall'anagrafica così segue sempre gli impianti reali.
+  "build": { "command": "node scripts/build-client.ts && node scripts/build-sitemap.ts" },
   "assets": {
     "directory": "public",
     "binding": "ASSETS",
