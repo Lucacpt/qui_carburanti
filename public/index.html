@@ -8,20 +8,22 @@
   <meta name="theme-color" content="#FF6B1A">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/app.css">
+  <script type="module" src="/app.js"></script>
 </head>
 <body>
   <header class="top">
-    <img src="/icon.svg" width="40" height="40" alt="">
-    <h1>QUI</h1>
+    <a href="/" class="home"><img src="/icon.svg" width="40" height="40" alt=""><h1>QUI</h1></a>
     <span class="beta">Beta</span>
   </header>
+  <div id="banner" class="banner" role="status" hidden></div>
   <main id="app">
-    <p class="lead">Dove c'è carburante, adesso. Segnalazioni anonime della comunità.</p>
-    <p class="note">In arrivo: provincia di Avellino.</p>
+    <p class="note">Caricamento dei distributori…</p>
+    <noscript><p>QUI ha bisogno di JavaScript per mostrare i distributori.</p></noscript>
   </main>
   <footer class="foot">
     <p>Informazioni degli utenti, non verificate. Non è una fonte ufficiale.</p>
-    <p><a href="/progetto">Il progetto</a> · QUI non usa cookie · <a href="https://github.com/Lucacpt/qui_carburanti">Codice</a></p>
+    <p><a href="/progetto">Il progetto</a> · <a href="/come-funziona">Come funziona</a> · QUI non usa cookie · <a href="https://github.com/Lucacpt/qui_carburanti">Codice</a></p>
   </footer>
+  <div id="live" class="sr-only" aria-live="polite"></div>
 </body>
 </html>

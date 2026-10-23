@@ -20,7 +20,7 @@ function result(over: Partial<StateResult>): StateResult {
 
 describe("ago", () => {
   it.each([
-    [0, "adesso"],
+    [0, "proprio ora"],
     [12, "12 min fa"],
     [60, "1 h fa"],
     [135, "2 h 15 min fa"],

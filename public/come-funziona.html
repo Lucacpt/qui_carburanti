@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Come funziona — QUI</title>
+  <meta name="description" content="Come QUI decide i colori dei distributori, come protegge i gestori e la tua privacy.">
+  <meta name="theme-color" content="#FF6B1A">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+</head>
+<body>
+  <header class="top">
+    <a href="/" class="home"><img src="/icon.svg" width="40" height="40" alt=""><h1>QUI</h1></a>
+  </header>
+  <main class="page">
+    <h2>Come funziona</h2>
+    <p>QUI mostra quello che <strong>le persone segnalano</strong>: non verifica di persona e non è una fonte ufficiale. Le regole sono pubbliche, ed eccole in breve.</p>
+
+    <h3>I colori</h3>
+    <ul>
+      <li><span class="s-green">● Disponibile</span>: almeno <strong>3 persone</strong> da reti diverse hanno confermato negli ultimi 45 minuti.</li>
+      <li><span class="s-amber">▲ Da verificare</span>: poche conferme, conferme non recenti, segnalazioni contrastanti.</li>
+      <li><span class="s-red">✕ Segnalato esaurito</span>: almeno <strong>3 persone</strong> hanno segnalato l'assenza, di cui almeno una sul posto.</li>
+      <li><span class="s-grey">○ Nessuna informazione</span>: nessuna segnalazione nelle ultime 8 ore. <strong>Non significa che sia esaurito.</strong></li>
+    </ul>
+
+    <h3>Sul posto o da remoto</h3>
+    <p>Se sei al distributore puoi farlo verificare al telefono con una sola lettura della posizione, che <strong>resta sul tuo telefono</strong>. Sul posto la tua segnalazione vale 1. Da remoto vale 1/4: ne servono 4 per farne una.</p>
+
+    <h3>Affidabilità</h3>
+    <p>Le barre ▮▮▮ indicano quanto fidarsi del colore: <strong>alta</strong> se negli ultimi 10 minuti hanno segnalato almeno 4 persone, di cui 2 sul posto; <strong>media</strong> per gli altri stati confermati; <strong>bassa</strong> per tutto ciò che è da verificare.</p>
+
+    <h3>Tutele per i gestori</h3>
+    <ul>
+      <li>Una sola persona non può mai rendere un distributore rosso o verde.</li>
+      <li>Se le segnalazioni di assenza arrivano tutte insieme, per 10 minuti restano <em>in verifica</em>.</li>
+      <li>Senza nuove segnalazioni, dopo 90 minuti il rosso diventa "da verificare": il distributore potrebbe essere stato rifornito.</li>
+      <li>Ogni gestore può segnalare un errore dalla scheda del distributore.</li>
+    </ul>
+
+    <h3 id="privacy">La tua privacy</h3>
+    <p>Nessun account, nessun cookie, nessun tracciamento. Il server non riceve mai la tua posizione. Il tuo indirizzo IP non viene salvato: viene trasformato in un codice anonimo che non è più collegabile a te dopo la mezzanotte. Le segnalazioni vengono cancellate dopo 8 ore.</p>
+    <p>Quando segnali per la prima volta, QUI salva <strong>sul tuo telefono</strong> un codice casuale che cambia ogni giorno: serve solo a evitare lo spam.</p>
+    <p>Il codice è pubblico: <a href="https://github.com/Lucacpt/qui_carburanti">puoi verificarlo</a>.</p>
+  </main>
+  <footer class="foot">
+    <p><a href="/">Torna a QUI</a> · <a href="/progetto">Il progetto</a> · QUI non usa cookie</p>
+  </footer>
+</body>
+</html>

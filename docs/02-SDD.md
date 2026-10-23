@@ -292,6 +292,13 @@ Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 | *Lazy:* Leaflet + protomaps-leaflet | ~90 KB | immutable |
 | *Lazy:* tile vettoriali per vista | ~30-80 KB | immutable |
 
+### 10.1-bis Implementazione MVP (v0.3.3)
+- `src/client/` in TypeScript senza framework, compilato con esbuild in `public/app.js` (≈ 6,7 KB brotli) e `public/pow.js` (Web Worker del PoW). La build parte da sola con `wrangler dev`/`deploy`.
+- DOM costruito solo con `createElement`/`textContent` (Trusted Types): nessun `innerHTML`. Gli unici script caricabili da codice sono nella policy di `src/client/tt.ts`.
+- Navigatore: l'utente sceglie l'app (Google Maps, Apple Mappe, `geo:`) e il telefono la ricorda. Nessuna lettura dello user agent.
+- Verificato in emulazione mobile (390 px) con DevTools Protocol: niente scorrimento orizzontale, nessun errore né avviso CSP/Trusted Types in console.
+- **Service worker rimandato** alle notifiche push (giorno 4-5): durante i rilasci rapidi una cache aggressiva mostrerebbe versioni vecchie.
+
 ### 10.2 Service worker
 - **Precache:** shell, JS e icone (versione legata all'hash della build).
 - **Anagrafica:** stale-while-revalidate.

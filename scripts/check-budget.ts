@@ -11,8 +11,7 @@ const KB = 1024;
 
 // [regex sul percorso relativo, budget in byte brotli]. Il primo che corrisponde vince.
 const BUDGETS: Array<[RegExp, number]> = [
-  [/^index\.html$/, 6 * KB],
-  [/^progetto\.html$/, 6 * KB],
+  [/\.html$/, 6 * KB],
   [/\.css$/, 4 * KB],
   [/\.js$/, 20 * KB],
   [/^r\/manifest\.json$/, 1 * KB],
@@ -20,8 +19,8 @@ const BUDGETS: Array<[RegExp, number]> = [
   [/\.svg$/, 2 * KB],
   [/^_headers$/, 2 * KB],
 ];
-// Prima vista: shell + stile + icona + anagrafica di una provincia (lo snapshot arriverà con il Worker).
-const FIRST_VIEW = [/^index\.html$/, /^app\.css$/, /^icon\.svg$/, /^r\/AV\..+\.json$/];
+// Prima vista: shell + stile + script + icona + anagrafica di una provincia (+ snapshot, pochi KB).
+const FIRST_VIEW = [/^index\.html$/, /^app\.css$/, /^app\.js$/, /^icon\.svg$/, /^r\/AV\..+\.json$/];
 const FIRST_VIEW_BUDGET = 60 * KB;
 
 function walk(dir: string): string[] {

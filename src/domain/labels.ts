@@ -14,11 +14,11 @@ export interface StateLabel {
 
 export const OPERATOR_LINK_TEXT = "Sei il gestore? Segnala un errore";
 
-/** "adesso", "12 min fa", "2 h fa", "2 h 15 min fa". */
+/** "proprio ora", "12 min fa", "2 h fa", "2 h 15 min fa". */
 export function ago(ms: number | null, now: number): string {
   if (ms === null) return "";
   const min = Math.max(0, Math.floor((now - ms) / 60_000));
-  if (min < 1) return "adesso";
+  if (min < 1) return "proprio ora";
   if (min < 60) return `${min} min fa`;
   const h = Math.floor(min / 60);
   const rest = min % 60;
