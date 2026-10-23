@@ -8,6 +8,7 @@
 | Pull request | `ci.yml`: lint, tipi, test, guardia privacy, budget, smoke test locale. Niente deploy |
 | Merge su `main` | Deploy su **staging** (`staging.quicarburanti.it`), poi smoke test completo: segnalazioni, PoW, contestazioni |
 | Tag `v*` (es. `v0.1.0`) | Staging e smoke test, poi **produzione** (`quicarburanti.it`) dopo la tua approvazione, poi smoke test in sola lettura |
+| *Actions → Deploy → Run workflow* su `main` | Solo staging e smoke test: per rilanciarlo dopo aver sistemato la configurazione |
 
 Lo staging è un Worker separato (`qui-staging`) con **Durable Objects propri**: i dati di prova non toccano la produzione. Non è indicizzato dai motori di ricerca (`X-Robots-Tag: noindex`). Le *preview URL* e `*.workers.dev` sono spente: userebbero gli stessi dati della produzione.
 

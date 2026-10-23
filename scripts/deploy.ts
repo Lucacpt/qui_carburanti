@@ -15,6 +15,19 @@ if (target !== "staging" && target !== "production") {
   console.error("Uso: node scripts/deploy.ts staging|production");
   process.exit(2);
 }
+// In CI token e account arrivano dall'environment GitHub (in locale basta `wrangler login`).
+if (process.env.GITHUB_ACTIONS === "true") {
+  const missing = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"].filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    console.error(
+      `Mancano ${missing.join(" e ")} nell'environment GitHub "${target}".\n` +
+        "Settings → Environments → " +
+        `${target}: il token va in "Environment secrets", l'Account ID in "Environment variables". ` +
+        "Poi Re-run jobs (docs/procedure/rilascio.md).",
+    );
+    process.exit(1);
+  }
+}
 // La radice di wrangler.jsonc è la produzione: --env= vuoto la seleziona in modo esplicito.
 const envFlag = `--env=${target === "production" ? "" : target}`;
 
