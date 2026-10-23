@@ -163,10 +163,14 @@ Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'
   require-trusted-types-for 'script'
 Permissions-Policy: geolocation=(self), camera=(), microphone=()
 Referrer-Policy: no-referrer
-Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+Strict-Transport-Security: max-age=63072000; includeSubDomains
 X-Content-Type-Options: nosniff
 Cross-Origin-Opener-Policy: same-origin
+Cross-Origin-Resource-Policy: same-origin
 ```
+Niente `preload` nell'HSTS: renderebbe obbligatorio HTTPS per sempre su ogni sottodominio, compresi quelli della posta di Aruba (`webmail`, `mail`), che non rispondono in HTTPS.
+
+**Errori verso l'esterno** (revisione di sicurezza, 2026-10-24): ogni errore delle API risponde `404 {"ok":false,"error":"Richiesta non riuscita. Riprova."}`, senza dire quale controllo è fallito; il dettaglio esiste solo in locale (`DEV_ERRORS`). Restano distinti, di proposito, `202` (accettata o scartata in silenzio) e `503` (sola lettura, con il suo messaggio). L'area admin risponde `404` a chi non è autenticato. Gli indirizzi inesistenti del sito ricevono `404.html` con stato 404; le pagine dell'app (`/d/<id>`, `/dati`) sono riscritte su `index.html` in `public/_redirects`.
 `connect-src 'self'` è il **garante tecnico** della privacy: anche un bug non può inviare dati a terzi dal browser.
 
 ### 6.4 Area amministrativa
@@ -263,13 +267,13 @@ Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 | Metodo | Path | Body / risposta | Note |
 |---|---|---|---|
 | GET | `/api/challenge?p=XX` | → `{algorithm, challenge, salt, maxnumber, signature}` | rate-limited |
-| POST | `/api/report` | `{p:"AV", id:12345, f:"B"\|"G"\|"L"\|"M"\|"H", h:0\|1, n:0\|1, q?:1\|2\|3, lim?:0\|1, tk:"<b64 16B>", pow:"<b64>"}` → `202 {ok, st}` | body ≤ 1 KB, campi extra ⇒ 400. `q`/`lim` sono facoltativi e ammessi solo con `h:1` |
+| POST | `/api/report` | `{p:"AV", id:12345, f:"B"\|"G"\|"L"\|"M"\|"H", h:0\|1, n:0\|1, q?:1\|2\|3, lim?:0\|1, tk:"<b64 16B>", pow:"<b64>"}` → `202 {ok, st}` | body ≤ 1 KB, campi extra ⇒ 404 generico. `q`/`lim` sono facoltativi e ammessi solo con `h:1` |
 | POST | `/api/push/subscribe` | `{p, ids:[≤20], f, sub:{endpoint, keys}, pow}` → `202 {expires}` | Giorno 4-5, ADR-0009. Scadenza 48 h |
 | POST | `/api/push/unsubscribe` | `{endpoint}` → `204` | |
 | GET | `/api/s/:prov` | → snapshot §5.2 | ETag, cache 30 s |
-| POST | `/api/contest` | `{p, id, f, reason: enum, contact?: string ≤ 120}` → `202` | PoW obbligatorio |
+| POST | `/api/contest` | `{p, id, f, reason: enum, contact?: string ≤ 120}` → `202` | PoW obbligatorio e consumata una sola volta; `RL_CONTEST` 10/min per rete |
 | GET | `/r/manifest.json`, `/r/*.json` | anagrafiche | statiche |
-| GET | `/.well-known/security.txt` | — | |
+| GET | `/.well-known/security.txt` | RFC 9116 | `Expires` controllata da `scripts/security-txt.test.ts` |
 | * | `/admin/*` | freeze, read-only, difficoltà PoW, gestione contestazioni | Cloudflare Access |
 
 **Deep link di navigazione** (client, con sola destinazione):

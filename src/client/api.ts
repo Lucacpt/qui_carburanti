@@ -52,6 +52,9 @@ async function takePow(prov: string): Promise<string> {
 
 export type SendResult = { ok: true } | { ok: false; message: string };
 
+/** Mai codici o dettagli tecnici a chi usa l'app: solo cosa fare. */
+export const RETRY_MESSAGE = "Non è andata a buon fine. Riprova tra poco.";
+
 async function post(path: string, body: Record<string, unknown>): Promise<SendResult> {
   try {
     const res = await fetch(path, {
@@ -60,9 +63,12 @@ async function post(path: string, body: Record<string, unknown>): Promise<SendRe
       body: JSON.stringify(body),
     });
     if (res.status === 202) return { ok: true };
-    const data = (await res.json().catch(() => ({}))) as { error?: string };
-    if (res.status === 503) return { ok: false, message: data.error ?? "Servizio sospeso" };
-    return { ok: false, message: data.error ?? `Errore ${res.status}` };
+    // Unica eccezione voluta: la sola lettura durante un attacco, con il suo messaggio.
+    if (res.status === 503) {
+      const data = (await res.json().catch(() => ({}))) as { error?: string };
+      return { ok: false, message: data.error ?? "Segnalazioni sospese temporaneamente" };
+    }
+    return { ok: false, message: RETRY_MESSAGE };
   } catch {
     return { ok: false, message: "Connessione assente: riprova tra poco" };
   }

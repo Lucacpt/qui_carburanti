@@ -61,13 +61,33 @@ async function main() {
     "home servita con CSP",
     home.ok && (home.headers.get("content-security-policy") ?? "").length > 0,
   );
+  check(
+    "CORP same-origin",
+    home.headers.get("cross-origin-resource-policy") === "same-origin" &&
+      health.headers.get("cross-origin-resource-policy") === "same-origin",
+  );
+
+  // Pagine: l'app risponde su /d/<id>, un indirizzo inventato riceve una vera 404.
+  const page = await fetch(`${BASE}/d/${station}`);
+  check("scheda /d/<id> → 200", page.status === 200, String(page.status));
+  const missing = await fetch(`${BASE}/pagina-che-non-esiste`);
+  check("indirizzo inesistente → 404", missing.status === 404, String(missing.status));
+
+  // Errori delle API: sempre 404 generico, senza dire quale controllo è fallito.
+  const badProv = await fetch(`${BASE}/api/challenge?p=XX`);
+  const badBody = (await badProv.json()) as { error?: string };
+  check(
+    "errore API → 404 generico",
+    badProv.status === 404 && badBody.error === "Richiesta non riuscita. Riprova.",
+    `${badProv.status} ${badBody.error}`,
+  );
 
   // Senza POW_SECRET la sfida fallisce: è il primo segno di un deploy configurato male.
   const challenge = await fetch(`${BASE}/api/challenge?p=${PROV}`);
   check("sfida PoW firmata (POW_SECRET presente)", challenge.ok, String(challenge.status));
 
   if (!LOCAL) {
-    // In locale ADMIN_DEV apre l'area; online deve chiuderla Access o il Worker (401/403/503).
+    // In locale ADMIN_DEV apre l'area; online la chiude Access, o il Worker con un 404 generico.
     const admin = await fetch(`${BASE}/api/admin/overview?p=${PROV}`, { redirect: "manual" });
     check("area admin chiusa senza login", admin.status >= 300, String(admin.status));
   }
@@ -92,10 +112,10 @@ async function main() {
     check("replay del PoW → 202 silenzioso", replay.status === 202, String(replay.status));
 
     const withCoords = await report({ ...valid, pow: await powPayload(), lat: 40.9 });
-    check("coordinate nel body → 400", withCoords.status === 400, String(withCoords.status));
+    check("coordinate nel body → 404", withCoords.status === 404, String(withCoords.status));
 
     const badPow = await report({ ...valid, pow: btoa("{}") });
-    check("PoW non valido → 400", badPow.status === 400, String(badPow.status));
+    check("PoW non valido → 404", badPow.status === 404, String(badPow.status));
   }
 
   const snap = await fetch(`${BASE}/api/s/${PROV}`);

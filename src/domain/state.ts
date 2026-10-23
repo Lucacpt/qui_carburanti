@@ -65,10 +65,12 @@ export function computeState(
   const negW = cappedWeight(neg, p);
   const posW45 = cappedWeight(pos45, p);
   const negNear = neg.some((r) => r.near);
+  // I conteggi mostrati ("da 3 persone") contano le RETI distinte, non i token: un telefono che
+  // rigenera il token non deve poter scrivere "da 12 persone" (ADR-0011, E: solo fatti).
   const base = {
-    confirmations: pos45.length,
+    confirmations: networks(pos45),
     lastConfirmMs: lastPos,
-    absences: neg.length,
+    absences: networks(neg),
     lastAbsenceMs: maxTs(neg),
     evidence: pos45.map(toEvidence),
   };
@@ -93,6 +95,9 @@ export function computeState(
 }
 
 const toEvidence = (r: Report): Evidence => ({ ts: r.ts, near: r.near, pkey: r.pkey });
+
+/** Numero di reti (prefissi) distinte: è il limite superiore onesto delle "persone" coinvolte. */
+const networks = (reports: readonly Report[]): number => new Set(reports.map((r) => r.pkey)).size;
 
 function maxTs(reports: readonly Report[]): number | null {
   return reports.length > 0 ? Math.max(...reports.map((r) => r.ts)) : null;

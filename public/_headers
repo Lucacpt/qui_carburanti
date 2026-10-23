@@ -5,6 +5,11 @@
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
   Cross-Origin-Opener-Policy: same-origin
+  Cross-Origin-Resource-Policy: same-origin
+
+/.well-known/security.txt
+  ! Content-Type
+  Content-Type: text/plain; charset=utf-8
 
 https://staging.quicarburanti.it/*
   X-Robots-Tag: noindex, nofollow

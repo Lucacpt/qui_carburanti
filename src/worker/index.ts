@@ -5,7 +5,7 @@ import { parseContest, parseReport } from "../domain/input.ts";
 import { handleAdmin } from "./admin.ts";
 import type { Env } from "./env.ts";
 import { withSecurityHeaders } from "./headers.ts";
-import { etagMatches, HttpError, json, readJson } from "./http.ts";
+import { etagMatches, GENERIC_ERROR, HttpError, json, notFound, readJson } from "./http.ts";
 import { anonymousKeys, networkKey } from "./identity.ts";
 import { located } from "./jurisdiction.ts";
 import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
@@ -143,9 +143,12 @@ export default {
       return await handle(request, env, ctx);
     } catch (err) {
       // Niente log: l'errore potrebbe contenere dati della richiesta (NFR-PR6).
-      if (err instanceof HttpError) return json({ ok: false, error: err.message }, err.status);
-      const detail = env.DEV_ERRORS === "1" ? { detail: String(err) } : {};
-      return json({ ok: false, error: "errore interno", ...detail }, 500);
+      // Verso l'esterno ogni errore è un 404 generico; il dettaglio solo in locale (npm run dev).
+      if (env.DEV_ERRORS === "1") {
+        const detail = err instanceof Error ? err.message : String(err);
+        return json({ ok: false, error: GENERIC_ERROR, detail }, 404);
+      }
+      return notFound();
     }
   },
 } satisfies ExportedHandler<Env>;
