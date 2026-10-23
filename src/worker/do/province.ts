@@ -4,13 +4,16 @@
 import { DurableObject } from "cloudflare:workers";
 import type { ContestInput } from "../../domain/input.ts";
 import type { ProvinceRegistry } from "../../domain/mimit.ts";
+import type { AdminCommand } from "../admin-input.ts";
 import type { Env } from "../env.ts";
 import { assertJurisdiction } from "../jurisdiction.ts";
 import {
+  type AdminOverview,
   ProvinceStore,
   type ReportStatus,
   type SnapshotBody,
   type SqlLike,
+  type StationHistory,
   type StoreReport,
 } from "../store/province-store.ts";
 
@@ -48,6 +51,46 @@ export class ProvinceDO extends DurableObject<Env> {
     // Il contatto va cancellato dopo 30 giorni anche se nessuno segnala più nulla.
     await this.ensureAlarm(now);
     return "ok";
+  }
+
+  // ---------------------------------------------------------------- area admin (ADR-0013)
+  // Il Worker chiama questi metodi solo dopo aver verificato il login di Cloudflare Access.
+
+  async adminOverview(): Promise<AdminOverview> {
+    return this.store.adminOverview(Date.now());
+  }
+
+  async adminHistory(prov: string, id: number): Promise<StationHistory | "invalid_station"> {
+    const now = Date.now();
+    await this.loadRegistry(prov, now);
+    if (!this.store.knowsStation(id)) return "invalid_station";
+    return this.store.stationHistory(id, now);
+  }
+
+  async adminAction(
+    prov: string,
+    cmd: AdminCommand,
+  ): Promise<"ok" | "not_found" | "invalid_station"> {
+    const now = Date.now();
+    await this.loadRegistry(prov, now);
+    switch (cmd.kind) {
+      case "ack":
+        this.store.ackAlerts(cmd.ids, now);
+        return "ok";
+      case "contest":
+        return this.store.setContestStatus(cmd.id, cmd.status, now) ? "ok" : "not_found";
+      case "freeze":
+        if (!this.store.knowsStation(cmd.station)) return "invalid_station";
+        this.store.adminFreeze(cmd.station, cmd.note, cmd.hours, now);
+        // Il congelamento deve scadere da solo anche se nessuno segnala.
+        await this.ensureAlarm(now);
+        return "ok";
+      case "unfreeze":
+        return this.store.unfreeze(cmd.station, now) ? "ok" : "not_found";
+      case "readOnly":
+        this.store.adminReadOnly(cmd.on, now);
+        return "ok";
+    }
   }
 
   /** Ogni minuto finché ci sono segnalazioni; poi solo alla prossima scadenza di un dato. */

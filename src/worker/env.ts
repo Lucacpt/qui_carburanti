@@ -16,4 +16,12 @@ export interface Env {
   readonly DO_JURISDICTION: string;
   /** Solo sviluppo locale (npm run dev): "1" include il messaggio d'errore nelle risposte 500. */
   readonly DEV_ERRORS?: string;
+  /** Area admin (ADR-0013): team di Cloudflare Access, es. "qui-admin.cloudflareaccess.com". */
+  readonly ACCESS_TEAM_DOMAIN?: string;
+  /** Application Audience (AUD) tag dell'applicazione Access. */
+  readonly ACCESS_AUD?: string;
+  /** Email ammesse, separate da virgola. Secret: non finisce nel repository. */
+  readonly ADMIN_EMAILS?: string;
+  /** Solo in locale: "1" apre l'area admin senza Access (accettato solo su localhost). */
+  readonly ADMIN_DEV?: string;
 }

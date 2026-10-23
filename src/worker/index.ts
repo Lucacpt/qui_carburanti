@@ -2,8 +2,10 @@
 // il Worker riceve solo /api/* (vedi `run_worker_first` in wrangler.jsonc). API: SDD §9.
 
 import { parseContest, parseReport } from "../domain/input.ts";
+import { handleAdmin } from "./admin.ts";
 import type { Env } from "./env.ts";
 import { withSecurityHeaders } from "./headers.ts";
+import { HttpError, json, readJson } from "./http.ts";
 import { anonymousKeys } from "./identity.ts";
 import { located } from "./jurisdiction.ts";
 import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
@@ -11,13 +13,7 @@ import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
 export { KeyDO } from "./do/keys.ts";
 export { ProvinceDO } from "./do/province.ts";
 
-const MAX_BODY_BYTES = 1024;
 const SNAPSHOT_RE = /^\/api\/s\/([A-Z]{2})$/;
-
-const json = (data: unknown, status = 200, extra: Record<string, string> = {}) =>
-  withSecurityHeaders(
-    Response.json(data, { status, headers: { "Cache-Control": "no-store", ...extra } }),
-  );
 
 const provinces = (env: Env) =>
   env.PROVINCES.split(",")
@@ -39,30 +35,16 @@ async function dayKey(env: Env, now: number): Promise<string> {
   return dayKeyCache.key;
 }
 
-async function readJson(request: Request): Promise<unknown> {
-  const text = await request.text();
-  if (text.length > MAX_BODY_BYTES) throw new HttpError(413, "richiesta troppo grande");
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new HttpError(400, "JSON non valido");
-  }
-}
-
-class HttpError extends Error {
-  readonly status: number;
-  constructor(status: number, message: string) {
-    super(message);
-    this.status = status;
-  }
-}
-
 async function handle(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const now = Date.now();
   const method = request.method;
 
   if (url.pathname === "/api/health") return json({ ok: true });
+
+  if (url.pathname.startsWith("/api/admin/")) {
+    return handleAdmin(request, env, url, now, provinces(env), (p) => province(env, p));
+  }
 
   if (url.pathname === "/api/challenge" && method === "GET") {
     const prov = url.searchParams.get("p") ?? "";

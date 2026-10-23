@@ -6,6 +6,10 @@
   X-Content-Type-Options: nosniff
   Cross-Origin-Opener-Policy: same-origin
 
+/admin*
+  X-Robots-Tag: noindex, nofollow
+  Cache-Control: no-store
+
 /r/*
   Cache-Control: public, max-age=31536000, immutable
 

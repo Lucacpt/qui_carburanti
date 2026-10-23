@@ -24,4 +24,11 @@ await build({
   outfile: "public/pow.js",
   format: "iife",
 });
-console.log("client: public/app.js, public/pow.js");
+// Area admin (ADR-0013): bundle separato, così chi usa QUI non scarica il codice dell'admin.
+await build({
+  ...common,
+  entryPoints: ["src/admin/main.ts"],
+  outfile: "public/admin.js",
+  format: "esm",
+});
+console.log("client: public/app.js, public/pow.js, public/admin.js");

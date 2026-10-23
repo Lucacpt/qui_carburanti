@@ -4,6 +4,6 @@
     "lib": ["es2023", "dom", "dom.iterable"],
     "types": []
   },
-  "include": ["src/client", "src/domain"],
+  "include": ["src/client", "src/admin", "src/domain"],
   "exclude": ["**/*.test.ts"]
 }

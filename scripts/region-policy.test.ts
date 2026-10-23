@@ -83,6 +83,11 @@ describe("politica regionale UE (wrangler.jsonc)", () => {
       }
     });
 
+    it(`${name}: area admin senza scorciatoie e senza email pubbliche (ADR-0013)`, () => {
+      expect(t.vars?.ADMIN_DEV, "ADMIN_DEV vale solo in .dev.vars").toBeUndefined();
+      expect(t.vars?.ADMIN_EMAILS, "ADMIN_EMAILS è un secret: wrangler secret put").toBeUndefined();
+    });
+
     it(`${name}: nessun log persistente (NFR-PR6)`, () => {
       expect(t.observability?.enabled ?? false).toBe(false);
       expect(t.logpush ?? false).toBe(false);
