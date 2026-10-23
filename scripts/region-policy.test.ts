@@ -3,51 +3,8 @@
 // la configurazione di ogni ambiente di deploy. Se aggiungi un binding che salva dati, questo test
 // ti obbliga a decidere dove li salva prima che arrivi in produzione.
 
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-
-interface WranglerConfig {
-  readonly vars?: Record<string, string>;
-  readonly env?: Record<string, WranglerConfig>;
-  readonly observability?: { readonly enabled?: boolean };
-  readonly logpush?: boolean;
-  readonly tail_consumers?: readonly unknown[];
-  readonly r2_buckets?: ReadonlyArray<{ readonly jurisdiction?: string }>;
-  readonly [key: string]: unknown;
-}
-
-/** JSONC → JSON. Le stringhe si copiano intere: "/api/*" contiene "/*" ma non è un commento. */
-function stripJsonc(src: string): string {
-  let out = "";
-  for (let i = 0; i < src.length; i++) {
-    const c = src[i];
-    if (c === '"') {
-      let j = i + 1;
-      while (j < src.length && src[j] !== '"') j += src[j] === "\\" ? 2 : 1;
-      out += src.slice(i, j + 1);
-      i = j;
-    } else if (c === "/" && src[i + 1] === "/") {
-      while (i < src.length && src[i] !== "\n") i++;
-      out += "\n";
-    } else if (c === "/" && src[i + 1] === "*") {
-      const end = src.indexOf("*/", i + 2);
-      i = end < 0 ? src.length : end + 1;
-    } else {
-      out += c;
-    }
-  }
-  return out.replace(/,(\s*[}\]])/g, "$1");
-}
-
-const config = JSON.parse(
-  stripJsonc(readFileSync(new URL("../wrangler.jsonc", import.meta.url), "utf8")),
-) as WranglerConfig;
-
-// La radice è la produzione; ogni env.* è un altro deploy. vars e binding NON si ereditano.
-const targets: Array<[string, WranglerConfig]> = [
-  ["produzione", config],
-  ...Object.entries(config.env ?? {}),
-];
+import { stripJsonc, targets } from "./wrangler-config.ts";
 
 // Archivi senza una giurisdizione UE dichiarabile in questo file: vietati finché non si verifica
 // dove salvano i dati (e si aggiornano informativa, registro e questo elenco).

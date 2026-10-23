@@ -1,5 +1,5 @@
 # Copia in .dev.vars (ignorato da git) per lo sviluppo locale con `npm run dev`.
-# In produzione: `npx wrangler secret put POW_SECRET` con un valore casuale lungo.
+# Online lo genera scripts/deploy.ts al primo deploy: nessuno lo vede (docs/procedure/rilascio.md).
 POW_SECRET=solo-per-sviluppo-locale-non-usare-in-produzione
 # workerd (runtime locale) non supporta la giurisdizione UE dei Durable Objects: in locale si disattiva.
 DO_JURISDICTION=none

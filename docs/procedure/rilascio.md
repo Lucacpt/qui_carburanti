@@ -1,0 +1,78 @@
+# Procedura di rilascio
+
+> Come QUI arriva online. Workflow: [`.github/workflows/deploy.yml`](../../.github/workflows/deploy.yml). Versione 1 · 2026-10-23.
+
+## Come funziona
+| Evento | Cosa succede |
+|---|---|
+| Pull request | `ci.yml`: lint, tipi, test, guardia privacy, budget, smoke test locale. Niente deploy |
+| Merge su `main` | Deploy su **staging** (`staging.quicarburanti.it`), poi smoke test completo: segnalazioni, PoW, contestazioni |
+| Tag `v*` (es. `v0.1.0`) | Staging e smoke test, poi **produzione** (`quicarburanti.it`) dopo la tua approvazione, poi smoke test in sola lettura |
+
+Lo staging è un Worker separato (`qui-staging`) con **Durable Objects propri**: i dati di prova non toccano la produzione. Non è indicizzato dai motori di ricerca (`X-Robots-Tag: noindex`). Le *preview URL* e `*.workers.dev` sono spente: userebbero gli stessi dati della produzione.
+
+Il rilascio in produzione si ferma se:
+- il tag non corrisponde a `version` in `package.json`;
+- i documenti legali contengono ancora segnaposto `[DA COMPILARE…]` o avvisi di bozza (`npm run legal-check -- --strict`);
+- lo staging o il suo smoke test falliscono.
+
+## Configurazione una tantum
+
+### 1. Cloudflare
+1. *Workers & Pages → Plans*: **Workers Paid**.
+2. *My Profile → API Tokens → Create Token*, modello **Edit Cloudflare Workers**:
+   - *Account Resources*: solo il tuo account;
+   - *Zone Resources*: solo `quicarburanti.it`.
+   
+   Copia il token **direttamente** nel passo 2: non salvarlo altrove e non incollarlo in chat.
+3. Annota l'**Account ID**: si trova nella colonna di destra della pagina *Workers & Pages*. Non è un segreto.
+
+### 2. GitHub: due environment
+*Settings → Environments*, crea **`staging`** e **`production`**. In ognuno inserisci:
+- *Environment secrets*: `CLOUDFLARE_API_TOKEN`, il token del passo 1.2;
+- *Environment variables*: `CLOUDFLARE_ACCOUNT_ID`.
+
+Poi limita chi può usarli:
+| Environment | *Deployment branches and tags* | *Required reviewers* |
+|---|---|---|
+| `staging` | *Selected*: branch `main`, tag `v*` | nessuno |
+| `production` | *Selected*: solo tag `v*` | tu (il deploy aspetta il tuo clic su *Approve*) |
+
+Consigliato: *Settings → Rules → Rulesets → New tag ruleset* su `v*`, così solo tu puoi creare o cancellare tag di rilascio.
+
+### 3. DNS
+- I record A di Aruba su `quicarburanti.it` e `www` devono essere **eliminati** (fatto il 2026-10-23). Al primo deploy Cloudflare crea da solo i record e i certificati per `quicarburanti.it` e `staging.quicarburanti.it`.
+- **`www` → `quicarburanti.it`**, dopo il primo deploy in produzione:
+  1. *DNS → Records → Add*: tipo `AAAA`, nome `www`, indirizzo `100::`, **Proxied**. L'indirizzo è finto: serve solo a far passare le richieste da Cloudflare.
+  2. *Rules → Redirect Rules → Create from template → "Redirect from WWW to root"*, con codice 301.
+
+### 4. Secret del Worker
+| Secret | Chi lo imposta | Quando |
+|---|---|---|
+| `POW_SECRET` | **Nessuno**: `scripts/deploy.ts` lo genera al primo deploy di ogni ambiente e lo carica insieme al codice | automatico |
+| `ACCESS_TEAM_DOMAIN`, `ACCESS_AUD`, `ADMIN_EMAILS` | Tu, da *Workers & Pages → qui → Settings → Variables and Secrets → Add → Secret* | dopo il primo deploy in produzione, quando Cloudflare Access è configurato ([ADR-0013](../adr/ADR-0013-area-admin.md)) |
+
+Senza i tre secret di Access l'area admin resta **chiusa** (503). Sullo staging resta sempre chiusa: è voluto.
+
+**Ruotare `POW_SECRET`:** eliminalo dalla dashboard e rifai il deploy, che ne genera uno nuovo. Le sfide aperte in quel momento (valide 5 minuti) vengono rifiutate e chi stava segnalando deve riprovare.
+
+## Rilasciare una versione
+1. Con una PR aggiorna `version` in `package.json` (es. `0.1.0`), poi uniscila.
+2. Dal tuo computer, su `main` aggiornato:
+   ```sh
+   git switch main && git pull
+   git tag v0.1.0
+   git push origin v0.1.0
+   ```
+3. *Actions → Deploy*: aspetta lo staging, poi approva **production**.
+4. Lo smoke test in produzione è in **sola lettura**: controlla salute, intestazioni di sicurezza, sfida PoW, snapshot e chiusura dell'area admin, senza creare segnalazioni.
+
+## Tornare indietro
+*Workers & Pages → qui → Deployments → Rollback* sulla versione precedente: è immediato. Il rollback riporta il **codice**, non i dati: le segnalazioni già ricevute restano.
+
+Per bloccare subito le segnalazioni durante un attacco non serve un rollback: usa la **sola lettura** dall'area admin.
+
+## Deploy dal proprio computer
+Non c'è uno script `npm run deploy`, di proposito: un deploy dal portatile salterebbe test, staging e smoke test. In emergenza, con `npx wrangler login`:
+- staging: `node scripts/deploy.ts staging`;
+- produzione: `node scripts/deploy.ts production`.
