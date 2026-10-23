@@ -23,3 +23,9 @@ export async function anonymousKeys(
   ]);
   return { rkey: r.slice(0, 32), pkey: p.slice(0, 32) };
 }
+
+/** Solo la chiave di rete (pkey), per il rate limit delle contestazioni (che non hanno un token). */
+export async function networkKey(request: Request, dayKey: string): Promise<string> {
+  const prefix = ipPrefix(request.headers.get("CF-Connecting-IP") ?? "") ?? "sconosciuto";
+  return (await hmacHex(dayKey, `p|${prefix}`)).slice(0, 32);
+}

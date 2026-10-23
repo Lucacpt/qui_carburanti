@@ -6,7 +6,7 @@ import { handleAdmin } from "./admin.ts";
 import type { Env } from "./env.ts";
 import { withSecurityHeaders } from "./headers.ts";
 import { etagMatches, HttpError, json, readJson } from "./http.ts";
-import { anonymousKeys } from "./identity.ts";
+import { anonymousKeys, networkKey } from "./identity.ts";
 import { located } from "./jurisdiction.ts";
 import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
 
@@ -94,7 +94,16 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
       now,
     );
     if (!pow.ok) throw new HttpError(400, pow.error);
-    const res = await province(env, parsed.value.prov).contest(parsed.value.prov, parsed.value);
+    // Limite grossolano per rete, come per le segnalazioni: le contestazioni finiscono al maintainer.
+    const net = await networkKey(request, await dayKey(env, now));
+    const { success } = await env.RL_CONTEST.limit({ key: net });
+    if (!success) return json({ ok: true }, 202);
+    const res = await province(env, parsed.value.prov).contest(
+      parsed.value.prov,
+      parsed.value,
+      pow.signature,
+      pow.expiresMs,
+    );
     if (res === "invalid_station") throw new HttpError(400, "distributore non valido");
     return json({ ok: true }, 202);
   }
