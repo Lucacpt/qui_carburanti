@@ -60,6 +60,24 @@ describe("buildSnapshot", () => {
     expect((s.s[0]?.[6] ?? 0) & Flag.FROZEN).toBe(Flag.FROZEN);
   });
 
+  it("ultime disponibilità solo per i carburanti senza stato attuale, in fasce di 5 minuti", () => {
+    const s = buildSnapshot(
+      "AV",
+      NOW,
+      [entry(4, res({ state: State.RED, absences: 3, lastAbsenceMs: min(12) }))],
+      false,
+      {
+        lastGreen: [
+          { id: 4, fuel: "B", ts: min(600) }, // ha uno stato attuale: non deve comparire
+          { id: 7, fuel: "B", ts: min(553) },
+        ],
+        lastHour: 12,
+      },
+    );
+    expect(s.lg).toEqual([[7, "B", 550]]);
+    expect(s.h).toBe(12);
+  });
+
   it("dal lato client la riga ricostruisce un'etichetta coerente", () => {
     const s = buildSnapshot(
       "AV",

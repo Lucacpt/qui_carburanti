@@ -97,6 +97,11 @@ describe("ProvinceStore — registro anonimo (ADR-0011 D)", () => {
     expect(t.at(-1)).toMatchObject({ cause: "report", confirmations: 3 });
   });
 
+  it("l'ultima disponibilità è anonima: impianto, carburante e minuto, nessun codice", () => {
+    const cols = rows<{ name: string }>("PRAGMA table_info(last_green)").map((c) => c.name);
+    expect(cols).toEqual(["station", "fuel", "ts"]);
+  });
+
   it("rosso in verifica: avvisa i maintainer, poi il tempo lo conferma con causa 'hold'", () => {
     for (let i = 0; i < 3; i++) store.report(rep({ has: false }), T0 + i * MIN);
     expect(store.stateOf(STATION, "B", T0 + 3 * MIN).flags).toBe(Flag.RED_PENDING);
@@ -107,6 +112,44 @@ describe("ProvinceStore — registro anonimo (ADR-0011 D)", () => {
       "SELECT to_state, cause FROM transitions ORDER BY rowid DESC LIMIT 1",
     )[0];
     expect(last).toEqual({ to_state: State.RED, cause: "hold" });
+  });
+});
+
+describe("ProvinceStore — ultimo stato noto e segnalazioni dell'ultima ora", () => {
+  const HOUR = 60 * MIN;
+  const snap = (now: number) =>
+    JSON.parse(store.snapshot("AV", now).body) as { s: unknown[][]; lg: unknown[][]; h: number };
+
+  it("dopo 8 ore il grigio porta l'ultima disponibilità; dopo 24 ore sparisce", () => {
+    for (let i = 0; i < 3; i++) store.report(rep(), T0 + i * MIN);
+    const live = snap(T0 + 3 * MIN);
+    expect(live.lg).toEqual([]); // c'è uno stato attuale: niente "ultima disponibilità"
+    expect(live.h).toBe(3);
+
+    store.maintenance(T0 + 8 * HOUR + 3 * MIN);
+    const grey = snap(T0 + 9 * HOUR);
+    expect(grey.s).toEqual([]);
+    expect(grey.lg).toEqual([[STATION, "B", 9 * 60 - 5]]); // conferma alle T0+2', fascia di 5'
+    expect(grey.h).toBe(0);
+
+    store.maintenance(T0 + 2 * MIN + 24 * HOUR);
+    expect(rows("SELECT * FROM last_green")).toHaveLength(0);
+    expect(snap(T0 + 25 * HOUR).lg).toEqual([]);
+  });
+
+  it("un vecchio rosso non lascia traccia: si ricordano solo le disponibilità", () => {
+    for (let i = 0; i < 3; i++) store.report(rep({ has: false }), T0 + i * MIN);
+    store.maintenance(T0 + 20 * MIN);
+    expect(rows("SELECT * FROM last_green")).toHaveLength(0);
+  });
+
+  it("la prossima scadenza guida l'alarm anche senza segnalazioni (es. contatto a 30 giorni)", () => {
+    expect(store.nextExpiry()).toBeNull();
+    store.contest(
+      { prov: "AV", id: STATION, fuel: undefined, reason: "has_fuel", contact: "x@y.it", pow: "" },
+      T0,
+    );
+    expect(store.nextExpiry()).toBe(T0 + 30 * 24 * HOUR);
   });
 });
 

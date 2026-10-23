@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ago, describeState } from "./labels.ts";
+import { ago, clock, describeState } from "./labels.ts";
 import { Flag, State, type StateResult } from "./types.ts";
 
 const NOW = Date.UTC(2026, 9, 22, 12, 0, 0);
@@ -29,7 +29,28 @@ describe("ago", () => {
   });
 });
 
+describe("clock", () => {
+  // NOW = 12:00 UTC del 22 ottobre 2026 = 14:00 in Italia (ora legale)
+  it("usa il fuso italiano e dice oggi, ieri o la data", () => {
+    expect(clock(min(30), NOW)).toBe("oggi alle 13:30");
+    expect(clock(Date.UTC(2026, 9, 21, 20, 10), NOW)).toBe("ieri alle 22:10");
+    expect(clock(Date.UTC(2026, 9, 19, 7, 5), NOW)).toBe("il 2026-10-19 alle 09:05");
+  });
+});
+
 describe("describeState", () => {
+  it("grigio con una disponibilità recente: lo dice, con l'orario, senza diventare verde", () => {
+    const l = describeState(result({ state: State.GREY }), NOW, Date.UTC(2026, 9, 21, 20, 10));
+    expect(l.title).toBe("Nessuna informazione recente");
+    expect(l.detail).toBe("ultima disponibilità segnalata ieri alle 22:10");
+    expect(l.operatorLink).toBe(false);
+  });
+
+  it("l'ultima disponibilità si mostra solo sul grigio, mai sopra uno stato attuale", () => {
+    const red = result({ state: State.RED, absences: 3, lastAbsenceMs: min(12) });
+    expect(describeState(red, NOW, min(600)).title).toBe("Segnalato esaurito");
+  });
+
   it("rosso: riporta quante persone e quando, e mostra il link per il gestore", () => {
     const l = describeState(result({ state: State.RED, absences: 3, lastAbsenceMs: min(12) }), NOW);
     expect(l.title).toBe("Segnalato esaurito");

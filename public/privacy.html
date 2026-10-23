@@ -110,13 +110,15 @@
       <li><strong>Base giuridica:</strong> obbligo legale per le richieste sui diritti e delle autorità (art. 6, par. 1, lett. c GDPR); negli altri casi legittimo interesse a risponderti (lett. f).</li>
       <li><strong>Per quanto:</strong> fino a 12 mesi dalla chiusura della richiesta; più a lungo solo se serve a difenderci in una controversia, e solo per il tempo necessario.</li>
     </ul>
-    <p>Le email agli indirizzi @quicarburanti.it sono inoltrate da Cloudflare (Email Routing) alla casella personale del titolare. Se invece apri una segnalazione su GitHub, il contenuto è <strong>pubblico</strong> e vale l'<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">informativa di GitHub</a>: non scriverci dati personali.</p>
+    <p>Le email agli indirizzi @quicarburanti.it sono gestite dal servizio di posta di Aruba S.p.A. (Italia), lo stesso fornitore del dominio, che agisce come responsabile del trattamento. Se invece apri una segnalazione su GitHub, il contenuto è <strong>pubblico</strong> e vale l'<a href="https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement">informativa di GitHub</a>: non scriverci dati personali.</p>
 
     <h4 id="anonimi">2.6 Dati anonimi che conserviamo</h4>
     <p>Questi dati non riguardano persone: li indichiamo per trasparenza.</p>
     <ul>
       <li><strong>Registro dei cambi di stato</strong> di ogni distributore (per esempio "verde → ambra alle 14:20"), senza alcun codice dei segnalatori: <span data-legal="transitionsMs">30 giorni</span>. Serve a verificare le contestazioni.</li>
       <li><strong>Totali orari</strong> per carburante (segnalazioni positive, negative, scartate): <span data-legal="statsMs">90 giorni</span>. Servono a capire se il servizio funziona o è sotto attacco.</li>
+      <li><strong>Ultima disponibilità confermata</strong> di ogni carburante (solo distributore e minuto, senza alcun codice): <span data-legal="lastGreenMs">24 ore</span>. Permette di mostrare, su un distributore senza segnalazioni recenti, quando era stato visto con carburante l'ultima volta.</li>
+      <li><strong>Numero di segnalazioni nell'ultima ora</strong> in provincia: un totale calcolato al momento, non salvato.</li>
     </ul>
 
     <h4 id="mai">2.7 Cosa non raccogliamo mai</h4>
@@ -155,6 +157,7 @@
           <tr><td>Email ricevute</td><td>12 mesi dalla chiusura</td></tr>
           <tr><td>Registro anonimo dei cambi di stato</td><td><span data-legal="transitionsMs">30 giorni</span></td></tr>
           <tr><td>Totali orari anonimi</td><td><span data-legal="statsMs">90 giorni</span></td></tr>
+          <tr><td>Ultima disponibilità confermata (anonima)</td><td><span data-legal="lastGreenMs">24 ore</span></td></tr>
           <tr><td>Copie tecniche di sicurezza di Cloudflare</td><td>Fino a 30 giorni (vedi punto 5)</td></tr>
         </tbody>
       </table>
@@ -164,7 +167,7 @@
     <p><strong>Non vendiamo e non cediamo dati a nessuno.</strong> Non usiamo reti pubblicitarie né servizi di statistica.</p>
     <ul>
       <li><strong>Cloudflare, Inc.</strong> e società del suo gruppo: rete, ospitalità del sito, database e inoltro delle email. Agiscono come <strong>responsabili del trattamento</strong> per nostro conto (art. 28 GDPR), in base al <a href="https://www.cloudflare.com/cloudflare-customer-dpa/">Data Processing Addendum di Cloudflare</a>.</li>
-      <li><strong>Il fornitore della casella email del titolare</strong>, solo per le email che ci invii.</li>
+      <li><strong>Aruba S.p.A.</strong> (Italia): posta elettronica degli indirizzi @quicarburanti.it, solo per le email che ci invii, come responsabile del trattamento.</li>
       <li><strong>GitHub</strong>, solo se scegli di aprire una segnalazione pubblica lì (titolare autonomo).</li>
       <li><strong>Autorità pubbliche</strong>, solo se la legge ci obbliga. Ricorda che non abbiamo IP né posizioni, e che le segnalazioni durano <span data-legal="reportsMs">8 ore</span>.</li>
     </ul>

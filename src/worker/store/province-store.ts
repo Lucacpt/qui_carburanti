@@ -45,6 +45,8 @@ export const RETENTION = {
   contestsMs: 180 * DAY,
   alertsMs: 180 * DAY,
   statsMs: 90 * DAY,
+  /** Ultima disponibilità confermata, mostrata sul grigio ("ieri alle 22:10"). */
+  lastGreenMs: DAY,
 } as const;
 
 const SNAPSHOT_TTL_MS = 30_000;
@@ -65,6 +67,9 @@ const SCHEMA = [
      ts INTEGER NOT NULL, from_state INTEGER, to_state INTEGER NOT NULL, flags INTEGER NOT NULL,
      confirmations INTEGER NOT NULL, absences INTEGER NOT NULL, cause TEXT NOT NULL)`,
   "CREATE INDEX IF NOT EXISTS transitions_ts ON transitions (ts)",
+  // Anonima come transitions: solo impianto, carburante e minuto dell'ultima conferma da verde.
+  `CREATE TABLE IF NOT EXISTS last_green (station INTEGER NOT NULL, fuel TEXT NOT NULL,
+     ts INTEGER NOT NULL, PRIMARY KEY (station, fuel))`,
   "CREATE TABLE IF NOT EXISTS frozen (station INTEGER PRIMARY KEY, until INTEGER NOT NULL, note TEXT NOT NULL)",
   `CREATE TABLE IF NOT EXISTS contests (id INTEGER PRIMARY KEY, station INTEGER NOT NULL,
      fuel TEXT, reason TEXT NOT NULL, contact TEXT, ts INTEGER NOT NULL,
@@ -242,7 +247,15 @@ export class ProvinceStore {
         frozen: isFrozen,
       };
     });
-    const snap = buildSnapshot(prov, now, entries, this.isReadOnly());
+    const lastGreen = this.sql
+      .exec<{ station: number; fuel: string; ts: number }>(
+        "SELECT station, fuel, ts FROM last_green WHERE ts > ?",
+        now - RETENTION.lastGreenMs,
+      )
+      .toArray()
+      .map((r) => ({ id: r.station, fuel: r.fuel as Fuel, ts: r.ts }));
+    const lastHour = this.count("SELECT COUNT(*) AS n FROM reports WHERE ts > ?", now - HOUR);
+    const snap = buildSnapshot(prov, now, entries, this.isReadOnly(), { lastGreen, lastHour });
     const body = JSON.stringify({ ...snap, fz: [...frozen] });
     this.cache = { body, etag: `"${fnv1a(body)}"`, at: now };
     return this.cache;
@@ -261,6 +274,7 @@ export class ProvinceStore {
     this.sql.exec("UPDATE contests SET contact = NULL WHERE ts <= ?", now - RETENTION.contactMs);
     this.sql.exec("DELETE FROM contests WHERE ts <= ?", now - RETENTION.contestsMs);
     this.sql.exec("DELETE FROM alerts WHERE ts <= ?", now - RETENTION.alertsMs);
+    this.sql.exec("DELETE FROM last_green WHERE ts <= ?", now - RETENTION.lastGreenMs);
     this.sql.exec(
       "DELETE FROM stats_hourly WHERE hour <= ?",
       Math.floor((now - RETENTION.statsMs) / HOUR),
@@ -273,6 +287,26 @@ export class ProvinceStore {
     this.sql.exec("DELETE FROM current WHERE state = ?", State.GREY);
     this.cache = undefined;
     return this.count("SELECT COUNT(*) AS n FROM reports") > 0;
+  }
+
+  /**
+   * Prossima scadenza di un dato conservato. Senza segnalazioni l'alarm non gira ogni minuto:
+   * si risveglia qui, così i tempi promessi dall'informativa valgono anche se nessuno usa QUI.
+   */
+  nextExpiry(): number | null {
+    const q = (query: string) => this.first<{ t: number | null }>(query)?.t ?? null;
+    const times = [
+      q(`SELECT MIN(ts) + ${RETENTION.lastGreenMs} AS t FROM last_green`),
+      q(`SELECT MIN(ts) + ${RETENTION.transitionsMs} AS t FROM transitions`),
+      q(`SELECT MIN(ts) + ${RETENTION.contactMs} AS t FROM contests WHERE contact IS NOT NULL`),
+      q(`SELECT MIN(ts) + ${RETENTION.contestsMs} AS t FROM contests`),
+      q(`SELECT MIN(ts) + ${RETENTION.alertsMs} AS t FROM alerts`),
+      q(`SELECT MIN(hour) * ${HOUR} + ${RETENTION.statsMs} AS t FROM stats_hourly`),
+      q("SELECT MIN(expires) AS t FROM abuse"),
+      q("SELECT MIN(expires) AS t FROM pow_used"),
+      q("SELECT MIN(until) AS t FROM frozen"),
+    ].filter((t): t is number => t !== null);
+    return times.length > 0 ? Math.min(...times) : null;
   }
 
   // ---------------------------------------------------------------- contestazioni e congelamento
@@ -348,6 +382,15 @@ export class ProvinceStore {
 
   private updateState(id: number, fuel: Fuel, now: number, cause?: Cause): StateResult {
     const next = this.stateOf(id, fuel, now);
+    // Prima del confronto con lo stato precedente: ogni nuova conferma da verde va ricordata.
+    if (next.state === State.GREEN && next.lastConfirmMs !== null) {
+      this.sql.exec(
+        "INSERT INTO last_green (station, fuel, ts) VALUES (?, ?, ?) ON CONFLICT(station, fuel) DO UPDATE SET ts = MAX(ts, excluded.ts)",
+        id,
+        fuel,
+        Math.floor(next.lastConfirmMs / MIN) * MIN,
+      );
+    }
     const prev = this.first<{ state: number; flags: number }>(
       "SELECT state, flags FROM current WHERE station = ? AND fuel = ?",
       id,

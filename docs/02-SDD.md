@@ -299,6 +299,7 @@ Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 - Verificato in emulazione mobile (390 px) con DevTools Protocol: niente scorrimento orizzontale, nessun errore né avviso CSP/Trusted Types in console.
 - **Service worker rimandato** alle notifiche push (giorno 4-5): durante i rilasci rapidi una cache aggressiva mostrerebbe versioni vecchie.
 - **Pagine legali** statiche, leggibili anche senza JavaScript: `/privacy`, `/termini`, `/cookie`. Ogni numero che dipende dal codice è marcato `data-legal` e confrontato con le costanti da `scripts/legal-pages.test.ts`; `scripts/check-legal.ts --strict` blocca il rilascio se restano segnaposto o l'avviso di bozza.
+- **Ultimo stato noto (v0.3.4):** lo snapshot aggiunge `lg` (`[id, carburante, etàMin]`: ultima conferma da verde nelle 24 ore, solo per i carburanti senza stato attuale, dalla tabella anonima `last_green`) e `h` (segnalazioni dell'ultima ora). Sul grigio il client mostra "ultima disponibilità segnalata ieri alle 22:10"; se nessun carburante è verde, un invito a segnalare. I vecchi rossi non si ripropongono mai (ADR-0011 B). Senza segnalazioni l'alarm del DO si risveglia alla prossima scadenza di un dato (`nextExpiry`), così le cancellazioni promesse avvengono anche senza attività.
 - **`/dati`** (route della SPA): mostra le chiavi `qui.*` salvate sul dispositivo in forma leggibile e le cancella con un tocco. Funziona anche offline.
 
 ### 10.2 Service worker

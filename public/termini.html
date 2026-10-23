@@ -97,7 +97,7 @@
       <li>una segnalazione dal posto pesa <span data-legal="wNear">1</span>, una da remoto <span data-legal="wRemote">0,25</span>; ogni rete conta al massimo 1;</li>
       <li>"Disponibile" richiede un peso di almeno <span data-legal="greenMin">3</span> negli ultimi <span data-legal="freshMs">45 minuti</span>;</li>
       <li>"Segnalato esaurito" richiede un peso di almeno <span data-legal="redMin">3</span>, con almeno una persona sul posto; per i primi <span data-legal="redHoldMs">10 minuti</span> resta "in verifica" e dopo <span data-legal="redTtlMs">90 minuti</span> senza nuove conferme torna "da verificare";</li>
-      <li>dopo <span data-legal="reportsMs">8 ore</span> senza segnalazioni lo stato torna "Nessuna informazione";</li>
+      <li>dopo <span data-legal="reportsMs">8 ore</span> senza segnalazioni lo stato torna "Nessuna informazione"; se nelle ultime <span data-legal="lastGreenMs">24 ore</span> il carburante era stato confermato disponibile, ne mostriamo l'orario come informazione non attuale (mai i vecchi esauriti);</li>
       <li>limiti anti-abuso: oltre <span data-legal="sameStationMax">3</span> segnalazioni sullo stesso distributore in <span data-legal="sameStationWindowMs">45 minuti</span>, o oltre <span data-legal="hourlyMax">20</span> in un'ora, le successive vengono ignorate per un tempo crescente, fino a <span data-legal="abuseMaxMs">24 ore</span>.</li>
     </ul>
     <p><strong>Interventi umani</strong> del titolare, sempre documentati nel registro anonimo dei cambi di stato:</p>

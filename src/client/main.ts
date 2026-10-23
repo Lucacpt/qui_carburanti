@@ -46,6 +46,8 @@ interface FuelStatus {
   readonly reliability: Reliability;
   readonly queue: number;
   readonly limit: number;
+  /** Solo sul grigio: ultima disponibilità confermata nelle 24 ore. */
+  readonly lastGreenMs: number | null;
 }
 
 const GREY: StateResult = {
@@ -81,9 +83,19 @@ const banner = document.getElementById("banner") as HTMLElement;
 const now = () => (ui.snap ? ui.snap.t * 1000 + (Date.now() - ui.snapAt) : Date.now());
 
 function statusOf(id: number, fuel: Fuel): FuelStatus {
-  const row = ui.snap?.rows.get(rowKey(id, fuel));
-  if (!row || !ui.snap) return { result: GREY, reliability: 0, queue: 0, limit: 0 };
-  return { result: rowToResult(row, ui.snap.t), reliability: row[7], queue: row[8], limit: row[9] };
+  const key = rowKey(id, fuel);
+  const row = ui.snap?.rows.get(key);
+  if (!row || !ui.snap) {
+    const lastGreenMs = ui.snap?.lastGreen.get(key) ?? null;
+    return { result: GREY, reliability: 0, queue: 0, limit: 0, lastGreenMs };
+  }
+  return {
+    result: rowToResult(row, ui.snap.t),
+    reliability: row[7],
+    queue: row[8],
+    limit: row[9],
+    lastGreenMs: null,
+  };
 }
 
 function bestFuel(st: Station): { fuel: Fuel; status: FuelStatus } | null {
@@ -139,7 +151,7 @@ function extras(s: FuelStatus): string {
 }
 
 function statusLine(fuel: Fuel, s: FuelStatus): HTMLElement {
-  const label = describeState(s.result, now());
+  const label = describeState(s.result, now(), s.lastGreenMs);
   const ui_ = STATE_UI[s.result.state];
   const more = extras(s);
   return h(
@@ -244,6 +256,12 @@ function getPosition(highAccuracy: boolean): Promise<Point> {
 
 const results = h("ol", { class: "results" });
 const summary = h("p", { class: "muted summary", "aria-live": "polite" });
+/** Quando nessuno ha confermato carburante (tipicamente di notte o al mattino presto). */
+const invite = h(
+  "p",
+  { class: "note-box", hidden: true },
+  "In questo momento arrivano poche segnalazioni: lo stato si aggiorna appena qualcuno passa. Sei a un distributore? Aprilo e tocca «C'è» o «Non c'è»: aiuti chi cerca.",
+);
 const more = h(
   "button",
   {
@@ -294,6 +312,7 @@ const listView = h(
     ),
   ),
   summary,
+  invite,
   results,
   more,
 );
@@ -314,10 +333,15 @@ async function usePosition(): Promise<void> {
 function updateResults(): void {
   const all = sortedResults();
   const green = all.filter((x) => x.best.status.result.state === State.GREEN).length;
+  const lastHour = ui.snap?.lastHour;
   summary.textContent =
     `${all.length} distributori` +
     (green > 0 ? ` · ${green} con carburante segnalato` : "") +
+    (lastHour === undefined
+      ? ""
+      : ` · ${lastHour === 1 ? "1 segnalazione" : `${lastHour} segnalazioni`} nell'ultima ora in provincia`) +
     (ui.origin || ui.query ? "" : " · cerca il tuo comune o usa la posizione");
+  invite.hidden = !ui.snap || green > 0 || all.length === 0;
   results.replaceChildren(
     ...all.slice(0, ui.limit).map(({ st, best, dist }) => card(st, best, dist)),
   );
