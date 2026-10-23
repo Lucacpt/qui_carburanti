@@ -43,13 +43,20 @@ export class ProvinceDO extends DurableObject<Env> {
     return this.store.snapshot(prov, Date.now());
   }
 
-  async contest(prov: string, input: ContestInput): Promise<"ok" | "invalid_station"> {
+  async contest(
+    prov: string,
+    input: ContestInput,
+    powSig: string,
+    powExpiresMs: number,
+  ): Promise<"ok" | "invalid_station"> {
     const now = Date.now();
     await this.loadRegistry(prov, now);
     if (!this.store.knowsStation(input.id)) return "invalid_station";
-    this.store.contest(input, now);
-    // Il contatto va cancellato dopo 30 giorni anche se nessuno segnala più nulla.
-    await this.ensureAlarm(now);
+    // La firma PoW vale una sola volta, come per le segnalazioni: niente contestazioni a raffica.
+    if (this.store.contest(input, powSig, powExpiresMs, now) === "ok") {
+      // Il contatto va cancellato dopo 30 giorni anche se nessuno segnala più nulla.
+      await this.ensureAlarm(now);
+    }
     return "ok";
   }
 

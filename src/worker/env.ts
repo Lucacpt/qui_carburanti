@@ -6,6 +6,7 @@ export interface Env {
   readonly PROVINCE: DurableObjectNamespace<ProvinceDO>;
   readonly KEYS: DurableObjectNamespace<KeyDO>;
   readonly RL_REPORT: RateLimit;
+  readonly RL_CONTEST: RateLimit;
   /** Segreto per firmare le sfide PoW, generato da scripts/deploy.ts al primo deploy. */
   readonly POW_SECRET: string;
   /** Province attive, separate da virgola. MVP: "AV". */

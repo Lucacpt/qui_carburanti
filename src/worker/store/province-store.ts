@@ -222,9 +222,7 @@ export class ProvinceStore {
     if (mask === undefined || (mask & FUEL_BIT[r.fuel]) === 0) return "invalid_station";
 
     // Anti-replay: ogni soluzione PoW vale una sola volta.
-    if (this.first("SELECT 1 AS x FROM pow_used WHERE sig = ?", r.powSig))
-      return this.drop(r.fuel, now);
-    this.sql.exec("INSERT INTO pow_used (sig, expires) VALUES (?, ?)", r.powSig, r.powExpiresMs);
+    if (!this.consumePow(r.powSig, r.powExpiresMs)) return this.drop(r.fuel, now);
 
     // Timeout progressivo in corso.
     const abuse = this.first<{ level: number; until: number }>(
@@ -363,7 +361,16 @@ export class ProvinceStore {
 
   // ---------------------------------------------------------------- contestazioni e congelamento
 
-  contest(c: ContestInput, now: number): void {
+  /** Consuma una firma PoW: true se nuova, false se già usata (replay). */
+  private consumePow(sig: string, expiresMs: number): boolean {
+    if (this.first("SELECT 1 AS x FROM pow_used WHERE sig = ?", sig)) return false;
+    this.sql.exec("INSERT INTO pow_used (sig, expires) VALUES (?, ?)", sig, expiresMs);
+    return true;
+  }
+
+  /** "replay" se la PoW era già stata usata: la contestazione viene ignorata in silenzio. */
+  contest(c: ContestInput, powSig: string, powExpiresMs: number, now: number): "ok" | "replay" {
+    if (!this.consumePow(powSig, powExpiresMs)) return "replay";
     this.sql.exec(
       "INSERT INTO contests (station, fuel, reason, contact, ts) VALUES (?, ?, ?, ?, ?)",
       c.id,
@@ -373,6 +380,7 @@ export class ProvinceStore {
       now,
     );
     this.alert("contest", c.id, c.fuel ?? null, c.reason, now);
+    return "ok";
   }
 
   /** Congela un impianto (tutti i carburanti) con una nota attribuita, per al massimo `durationMs`. */
