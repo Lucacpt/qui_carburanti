@@ -30,9 +30,11 @@
     ]
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["ProvinceDO", "KeyDO"] }],
-  // Limite grossolano per rete anonima (pkey): 30 segnalazioni al minuto, alto per via del CGNAT.
+  // Limite grossolano per rete anonima (pkey): 30 al minuto, alto per via del CGNAT. Contestazioni
+  // su un contatore separato: finiscono al maintainer, quindi un limite proprio (anti-raffica).
   "ratelimits": [
-    { "name": "RL_REPORT", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } }
+    { "name": "RL_REPORT", "namespace_id": "1001", "simple": { "limit": 30, "period": 60 } },
+    { "name": "RL_CONTEST", "namespace_id": "1003", "simple": { "limit": 10, "period": 60 } }
   ],
   "vars": {
     "PROVINCES": "AV",
@@ -61,7 +63,8 @@
         ]
       },
       "ratelimits": [
-        { "name": "RL_REPORT", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } }
+        { "name": "RL_REPORT", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } },
+        { "name": "RL_CONTEST", "namespace_id": "1004", "simple": { "limit": 10, "period": 60 } }
       ],
       "vars": { "PROVINCES": "AV", "DO_JURISDICTION": "eu", "POW_MAX": "50000" },
       "observability": { "enabled": false }

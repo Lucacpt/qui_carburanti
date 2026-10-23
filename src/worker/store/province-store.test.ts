@@ -143,10 +143,27 @@ describe("ProvinceStore — ultimo stato noto e segnalazioni dell'ultima ora", (
     expect(rows("SELECT * FROM last_green")).toHaveLength(0);
   });
 
+  it("una contestazione con una PoW già usata viene ignorata (anti-raffica)", () => {
+    const c = {
+      prov: "AV",
+      id: STATION,
+      fuel: undefined,
+      reason: "wrong_data" as const,
+      contact: undefined,
+      pow: "",
+    };
+    expect(store.contest(c, "sig-dup", T0 + 5 * MIN, T0)).toBe("ok");
+    expect(store.contest(c, "sig-dup", T0 + 5 * MIN, T0 + MIN)).toBe("replay");
+    expect(rows("SELECT * FROM contests")).toHaveLength(1);
+  });
+
   it("la prossima scadenza guida l'alarm anche senza segnalazioni (es. contatto a 30 giorni)", () => {
     expect(store.nextExpiry()).toBeNull();
+    // PoW con scadenza lontana: qui interessa il contatto a 30 giorni, non la pulizia di pow_used.
     store.contest(
       { prov: "AV", id: STATION, fuel: undefined, reason: "has_fuel", contact: "x@y.it", pow: "" },
+      "sig-next",
+      T0 + 60 * 24 * HOUR,
       T0,
     );
     expect(store.nextExpiry()).toBe(T0 + 30 * 24 * HOUR);
@@ -160,6 +177,8 @@ describe("ProvinceStore — area admin (ADR-0013)", () => {
     for (let i = 0; i < 3; i++) store.report(rep({ has: false }), T0 + i * MIN);
     store.contest(
       { prov: "AV", id: STATION, fuel: "B", reason: "has_fuel", contact: "x@y.it", pow: "" },
+      "sig-ov",
+      T0 + 10 * MIN,
       T0 + 5 * MIN,
     );
     const o = store.adminOverview(T0 + 6 * MIN);
@@ -207,6 +226,8 @@ describe("ProvinceStore — area admin (ADR-0013)", () => {
     expect(store.report(rep(), T0 + MIN)).toBe("read_only");
     store.contest(
       { prov: "AV", id: STATION, fuel: undefined, reason: "other", contact: undefined, pow: "" },
+      "sig-ro",
+      T0 + 5 * MIN,
       T0,
     );
     const id = store.adminOverview(T0).contests[0]?.id ?? 0;
@@ -237,6 +258,8 @@ describe("ProvinceStore — manutenzione e conservazione dei dati", () => {
   it("il contatto di una contestazione viene cancellato dopo 30 giorni", () => {
     store.contest(
       { prov: "AV", id: STATION, fuel: "B", reason: "has_fuel", contact: "x@y.it", pow: "" },
+      "sig-30d",
+      T0 + 5 * MIN,
       T0,
     );
     store.maintenance(T0 + 31 * 24 * 60 * MIN);
@@ -246,6 +269,8 @@ describe("ProvinceStore — manutenzione e conservazione dei dati", () => {
   it("contestazioni e avvisi spariscono dopo 180 giorni, come scritto nell'informativa", () => {
     store.contest(
       { prov: "AV", id: STATION, fuel: undefined, reason: "other", contact: undefined, pow: "" },
+      "sig-180d",
+      T0 + 5 * MIN,
       T0,
     );
     store.maintenance(T0 + 179 * 24 * 60 * MIN);
