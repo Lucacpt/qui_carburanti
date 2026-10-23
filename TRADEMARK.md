@@ -1,6 +1,6 @@
 # Uso del nome e dell'icona "QUI"
 
-Il **codice** di QUI è libero (EUPL-1.2). Il **nome "QUI"** e l'**icona** (dito che punta una X, arancione e bianco) identificano invece l'istanza ufficiale del progetto, perché gli utenti devono sapere di chi si fidano.
+Il **codice** di QUI è libero (EUPL-1.2). Il **nome "QUI"** e l'**icona** (una mano che indica una X, bianca su arancione `#EA580C`, file [`public/icon.svg`](public/icon.svg)) identificano invece l'istanza ufficiale del progetto, perché gli utenti devono sapere di chi si fidano.
 
 Puoi farlo:
 - citare QUI per parlare del progetto, scriverne o collegarti al sito;
