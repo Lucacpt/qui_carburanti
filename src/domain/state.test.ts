@@ -86,10 +86,12 @@ describe("computeState — tabella dei casi (SDD §8, rev. v0.3.1: soglie a 3 pe
       conf: 3,
     },
     {
-      name: "3 conferme dalla stessa rete (CGNAT) → ambra",
+      // Stessa rete: CGNAT, oppure un solo telefono che rigenera il token. Si mostra "1 conferma":
+      // il conteggio non può dire "3 persone" se non lo può dimostrare.
+      name: "3 conferme dalla stessa rete (CGNAT o token rigenerati) → ambra, contate come 1",
       reports: [yes(10, { pkey: "cgnat" }), yes(12, { pkey: "cgnat" }), yes(14, { pkey: "cgnat" })],
       state: State.AMBER,
-      conf: 3,
+      conf: 1,
     },
     {
       name: "12 conferme remote da 12 reti → verde (12 × 0,25 = 3,0)",
