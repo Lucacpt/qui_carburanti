@@ -1,6 +1,6 @@
 /*
   Content-Security-Policy: default-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'; require-trusted-types-for 'script'
-  Permissions-Policy: geolocation=(self), camera=(), microphone=(), interest-cohort=()
+  Permissions-Policy: geolocation=(self), camera=(), microphone=()
   Referrer-Policy: no-referrer
   Strict-Transport-Security: max-age=63072000; includeSubDomains
   X-Content-Type-Options: nosniff
