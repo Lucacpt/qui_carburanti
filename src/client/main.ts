@@ -447,17 +447,18 @@ function renderDetail(id: number): HTMLElement {
     ),
     navLinks(st),
     h("button", { type: "button", class: "btn", onClick: () => void share(st) }, "Condividi"),
-    operator
-      ? h(
-          "p",
-          {},
-          h(
-            "button",
-            { type: "button", class: "link", onClick: () => openContest(st) },
-            OPERATOR_LINK_TEXT,
-          ),
-        )
-      : null,
+    // Sempre visibile, anche in sola lettura (ADR-0011, rev. 2026-10-23): il gestore può dover
+    // correggere un "Disponibile" sbagliato, un impianto chiuso o i dati dell'anagrafica.
+    // In evidenza quando ci sono segnalazioni di assenza.
+    h(
+      "p",
+      { class: operator ? "note-box" : undefined },
+      h(
+        "button",
+        { type: "button", class: "link", onClick: () => openContest(st) },
+        OPERATOR_LINK_TEXT,
+      ),
+    ),
     h(
       "p",
       { class: "muted small" },

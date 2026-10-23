@@ -19,7 +19,7 @@ Inoltre, dopo 8 ore non resta traccia di *perché* uno stato è stato mostrato, 
 | **B** | **Scadenza del rosso:** senza nuove assenze per 90 minuti, il rosso diventa ambra "Segnalato esaurito X fa, da verificare: potrebbe essere stato rifornito" | `computeState`, `redTtlMs` |
 | **C** | **Rosso in verifica:** se tutte le assenze che compongono il rosso sono degli ultimi 10 minuti, si mostra ambra "Segnalazioni di assenza in verifica". Il DO notifica i maintainer e aumenta la difficoltà PoW su quel distributore | `computeState`, `redHoldMs`, ProvinceDO |
 | **D** | **Registro anonimo dei cambi di stato** (30 giorni): distributore, carburante, minuto, stato, quante conferme e assenze, causa. **Nessun identificativo dei segnalatori** | ProvinceDO, tabella `transitions` (SDD §5.3) |
-| **E** | **Etichette descrittive:** "Segnalato esaurito **da 3 persone** · ultima segnalazione 12 min fa", mai "Esaurito". Link "**Sei il gestore? Segnala un errore**" su ogni stato con assenze. Un test vieta le formulazioni assertive | `src/domain/labels.ts` |
+| **E** | **Etichette descrittive:** "Segnalato esaurito **da 3 persone** · ultima segnalazione 12 min fa", mai "Esaurito". Link "**Sei il gestore? Segnala un errore**" su **ogni scheda**, in evidenza sugli stati con assenze (rev. 2026-10-23: prima compariva solo con assenze, e il gestore non poteva correggere un "Disponibile" sbagliato, un impianto chiuso o i dati dell'anagrafica). Un test vieta le formulazioni assertive | `src/domain/labels.ts` |
 | **F** | **Procedura pubblica per le contestazioni**, con tempi di risposta e azioni previste | [procedure/contestazioni.md](../procedure/contestazioni.md) |
 
 ## Options Considered
@@ -55,5 +55,5 @@ Sul piano legale conta dimostrare la **diligenza**, non l'infallibilità: regole
 ## Action Items
 1. [x] A, B, C, E nel dominio, con test (70 test verdi).
 2. [ ] D e la notifica di C nella ProvinceDO (prossima PR).
-3. [ ] Link "Segnala un errore" nella UI → `POST /api/contest`.
+3. [x] Link "Segnala un errore" nella UI → `POST /api/contest`, su ogni scheda.
 4. [ ] Testo nell'informativa sul registro D.
