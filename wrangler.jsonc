@@ -9,9 +9,9 @@
   "workers_dev": false,
   "preview_urls": false,
   "routes": [{ "pattern": "quicarburanti.it", "custom_domain": true }],
-  // Prima di `wrangler dev` e `wrangler deploy`: il client (public/app.js, pow.js, admin.js) e
-  // public/sitemap.xml, generata dall'anagrafica così segue sempre gli impianti reali.
-  "build": { "command": "node scripts/build-client.ts && node scripts/build-sitemap.ts" },
+  // Prima di `wrangler dev` e `wrangler deploy`: il client (public/app.js, pow.js, admin.js), poi
+  // public/sitemap.xml e public/llms-full.txt, generati da anagrafica e pagine (seguono i dati veri).
+  "build": { "command": "node scripts/build-client.ts && node scripts/build-seo.ts" },
   "assets": {
     "directory": "public",
     "binding": "ASSETS",

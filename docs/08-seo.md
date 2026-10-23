@@ -66,7 +66,7 @@ Non ho dati di volume: le priorità vanno verificate in **Google Search Console*
 
 ### Fase 0 — fatto (PR `feat/seo` e `fix/errori-header`)
 - `robots.txt`: tutto aperto tranne `/api/`, `/admin`, `/dati`; `/r/` resta aperto perché serve ai motori per disegnare le schede.
-- Sitemap: 6 pagine più una scheda per impianto (230), `lastmod` = data dell'estrazione MIMIT. Generata da `scripts/build-sitemap.ts` a ogni build, quindi segue sempre l'anagrafica. Test in `scripts/sitemap.test.ts`.
+- Sitemap: 6 pagine più una scheda per impianto (230), `lastmod` = data dell'estrazione MIMIT. Generata da `scripts/build-seo.ts` a ogni build, quindi segue sempre l'anagrafica. Test in `scripts/sitemap.test.ts`.
 - Canonical: statico sulle pagine informative; su home e schede lo imposta l'app (`setCanonical` in `src/client/main.ts`), perché `index.html` viene servito anche per `/d/<id>`.
 - Vera pagina 404 con stato HTTP 404 e `noindex`.
 - Lo staging ha `X-Robots-Tag: noindex` su tutto.
@@ -108,7 +108,7 @@ Solo contenuti che possiamo sostenere con fatti; niente testi riempitivi.
 
 ### Fase 4 — visibilità nelle risposte delle IA
 - Il contenuto statico della fase 1 è ciò che ChatGPT, Perplexity, Claude e Gemini possono leggere e citare.
-- `/llms.txt`: un riassunto testuale di cosa fa QUI, per chi e con quali limiti, con link alle pagine principali.
+- **Fatto:** `/llms.txt` (riassunto con i link e le regole per citare QUI, scritto a mano) e `/llms-full.txt` (testo di "Come funziona" e "Il progetto" più copertura e comuni dell'anagrafica, generato a ogni build da `scripts/build-seo.ts`). `/llm.txt`, nome non standard, rimanda con un 301 a `/llms.txt`. Nessuno dei due contiene stati in tempo reale.
 - `robots.txt` oggi permette tutti i bot. **Decisione del maintainer:** si possono bloccare i bot che raccolgono dati per l'addestramento (`GPTBot`, `ClaudeBot`, `Google-Extended`, `CCBot`) lasciando aperti quelli che cercano per rispondere (`OAI-SearchBot`, `PerplexityBot`, `Claude-SearchBot`). Per un progetto di pubblica utilità tenerli tutti aperti è ragionevole.
 - Frasi chiare e verificabili sulle pagine ("QUI mostra le segnalazioni degli automobilisti; non è una fonte ufficiale"): le IA tendono a riportarle così come sono.
 
@@ -134,7 +134,7 @@ Solo contenuti che possiamo sostenere con fatti; niente testi riempitivi.
 ## 6. La sitemap
 - **Dove:** `https://quicarburanti.it/sitemap.xml`, indicata in `robots.txt`.
 - **Cosa contiene:** le pagine `/`, `/come-funziona`, `/progetto`, `/privacy`, `/termini`, `/cookie` e una voce `/d/<id>` per ciascuno dei 230 impianti, con `lastmod` uguale alla data dell'anagrafica.
-- **Come si aggiorna:** da sola. `npm run build` e ogni deploy eseguono `scripts/build-sitemap.ts`. Dopo `npm run import:mimit`, al deploy successivo la sitemap segue i nuovi impianti. Il file generato non è nel repository (`.gitignore`), come `app.js`.
+- **Come si aggiorna:** da sola. `npm run build` e ogni deploy eseguono `scripts/build-seo.ts`. Dopo `npm run import:mimit`, al deploy successivo la sitemap segue i nuovi impianti. Il file generato non è nel repository (`.gitignore`), come `app.js`.
 - **Fase 1:** quando arriveranno le pagine dei comuni, si aggiungono in `scripts/sitemap.ts`.
 
 ## 7. Chi fa cosa

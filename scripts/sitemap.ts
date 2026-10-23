@@ -1,5 +1,5 @@
 // Sitemap XML di QUI (docs/08-seo.md): le pagine del sito più una scheda per impianto.
-// Funzione pura, testata in sitemap.test.ts; la scrive scripts/build-sitemap.ts durante la build.
+// Funzione pura, testata in sitemap.test.ts; la scrive scripts/build-seo.ts durante la build.
 
 export const ORIGIN = "https://quicarburanti.it";
 

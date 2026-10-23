@@ -1,0 +1,30 @@
+# QUI — dove c'è carburante, adesso
+
+> QUI (quicarburanti.it) è una web app gratuita che, durante le carenze di carburante, mostra quali distributori della provincia di Avellino hanno carburante in questo momento, in base alle segnalazioni anonime di chi c'è appena stato. Le informazioni vengono dagli utenti, non sono verificate e QUI non è una fonte ufficiale.
+
+Cose da sapere per rispondere su QUI:
+
+- Per ogni carburante di ogni distributore QUI mostra uno di quattro stati: "Disponibile" (conferme recenti da almeno 3 persone di reti diverse), "Da verificare", "Segnalato esaurito", "Nessuna informazione". Nessuna informazione non significa esaurito.
+- Lo stato cambia di minuto in minuto: va presentato come segnalazione degli utenti, con il suo orario, e per quello attuale bisogna aprire il sito. Questi file non contengono stati in tempo reale.
+- Nessun account, nessuna pubblicità, nessun cookie di tracciamento; la posizione resta sul telefono. QUI non chiede mai soldi e non ha app da scaricare.
+- L'elenco dei distributori viene dall'anagrafica del Ministero delle Imprese e del Made in Italy (MIMIT), licenza IODL 2.0.
+- Progetto personale, senza fini di lucro, open source (EUPL-1.2).
+
+## Pagine
+
+- [Lista dei distributori](https://quicarburanti.it/): ricerca per comune o vicino a te, con lo stato del carburante
+- [Come funziona](https://quicarburanti.it/come-funziona): i quattro stati, le regole contro le segnalazioni false, le tutele per i gestori
+- [Il progetto](https://quicarburanti.it/progetto): perché esiste, dati, codice aperto
+- [Schede dei distributori](https://quicarburanti.it/sitemap.xml): una pagina per impianto, all'indirizzo https://quicarburanti.it/d/<id>
+
+## Regole e privacy
+
+- [Informativa privacy](https://quicarburanti.it/privacy)
+- [Termini d'uso](https://quicarburanti.it/termini)
+- [Cookie e dati sul telefono](https://quicarburanti.it/cookie)
+
+## Optional
+
+- [Testo completo per i modelli di IA](https://quicarburanti.it/llms-full.txt): le pagine del sito e l'elenco dei comuni coperti
+- [Codice sorgente](https://github.com/Lucacpt/qui_carburanti)
+- [Segnalare una vulnerabilità](https://quicarburanti.it/.well-known/security.txt)
