@@ -19,6 +19,7 @@
     "test:watch": "vitest",
     "budget": "node scripts/check-budget.ts",
     "privacy-guard": "node scripts/privacy-guard.ts",
+    "legal-check": "node scripts/check-legal.ts",
     "import:mimit": "node scripts/import-mimit.ts AV",
     "deploy": "wrangler deploy"
   },

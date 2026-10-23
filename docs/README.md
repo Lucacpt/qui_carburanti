@@ -28,6 +28,12 @@
 | [0009](adr/ADR-0009-notifiche-push.md) | Push senza GPS continuo, scadenza 48 h | Accepted (giorno 4-5) |
 | [0010](adr/ADR-0010-dominio.md) | Dominio `quicarburanti.it` | Accepted |
 | [0011](adr/ADR-0011-tutele-gestori.md) | Tutele per gestori e maintainer (rosso in verifica, scadenza, registro, etichette) | Accepted |
+| [0012](adr/ADR-0012-residenza-dati-ue.md) | Residenza UE: giurisdizione dei DO fail-closed, autoverifica, politica regionale come test | Accepted |
 
 ## Procedure
 - [Segnalare un errore o contestare un'informazione](procedure/contestazioni.md)
+
+## Documenti legali
+- Pagine pubbliche: [informativa privacy](../public/privacy.html), [termini d'uso](../public/termini.html), [cookie](../public/cookie.html)
+- [Registro dei trattamenti](legale/registro-trattamenti.md), con valutazione del legittimo interesse, verifica DPIA e procedura per le violazioni dei dati
+- Coerenza con il codice: `scripts/legal-pages.test.ts`. Segnaposto da compilare prima del rilascio: `npm run legal-check`

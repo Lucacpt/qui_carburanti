@@ -34,12 +34,16 @@ export const ABUSE = {
   sameStationMax: 3,
   hourlyMax: 20,
   maxTimeoutMs: DAY,
+  /** Quanto resta il contatore di un codice dopo l'ultimo blocco. */
+  keepMs: DAY,
 } as const;
 
-const RETENTION = {
+/** Tempi di conservazione: l'informativa li cita (lo verifica scripts/legal-pages.test.ts). */
+export const RETENTION = {
   transitionsMs: 30 * DAY,
   contactMs: 30 * DAY,
   contestsMs: 180 * DAY,
+  alertsMs: 180 * DAY,
   statsMs: 90 * DAY,
 } as const;
 
@@ -256,6 +260,7 @@ export class ProvinceStore {
     this.sql.exec("DELETE FROM transitions WHERE ts <= ?", now - RETENTION.transitionsMs);
     this.sql.exec("UPDATE contests SET contact = NULL WHERE ts <= ?", now - RETENTION.contactMs);
     this.sql.exec("DELETE FROM contests WHERE ts <= ?", now - RETENTION.contestsMs);
+    this.sql.exec("DELETE FROM alerts WHERE ts <= ?", now - RETENTION.alertsMs);
     this.sql.exec(
       "DELETE FROM stats_hourly WHERE hour <= ?",
       Math.floor((now - RETENTION.statsMs) / HOUR),
@@ -394,7 +399,7 @@ export class ProvinceStore {
       rkey,
       next,
       until,
-      now + DAY,
+      now + ABUSE.keepMs,
     );
   }
 

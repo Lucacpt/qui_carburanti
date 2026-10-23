@@ -4,6 +4,7 @@
 import { DurableObject } from "cloudflare:workers";
 import { randomHex } from "../crypto.ts";
 import type { Env } from "../env.ts";
+import { assertJurisdiction } from "../jurisdiction.ts";
 
 const utcDay = (now: number) => new Date(now).toISOString().slice(0, 10);
 
@@ -13,6 +14,11 @@ function nextUtcMidnight(now: number): number {
 }
 
 export class KeyDO extends DurableObject<Env> {
+  constructor(ctx: DurableObjectState, env: Env) {
+    super(ctx, env);
+    assertJurisdiction(ctx.id, env);
+  }
+
   async dayKey(): Promise<{ day: string; key: string }> {
     const now = Date.now();
     const day = utcDay(now);

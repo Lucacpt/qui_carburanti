@@ -5,6 +5,7 @@ import { parseContest, parseReport } from "../domain/input.ts";
 import type { Env } from "./env.ts";
 import { withSecurityHeaders } from "./headers.ts";
 import { anonymousKeys } from "./identity.ts";
+import { located } from "./jurisdiction.ts";
 import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
 
 export { KeyDO } from "./do/keys.ts";
@@ -23,11 +24,8 @@ const provinces = (env: Env) =>
     .map((p) => p.trim())
     .filter(Boolean);
 
-/** In produzione i dati restano in UE (giurisdizione "eu"); in locale workerd non la supporta. */
 function province(env: Env, prov: string) {
-  const j = env.DO_JURISDICTION;
-  const ns =
-    j && j !== "none" ? env.PROVINCE.jurisdiction(j as DurableObjectJurisdiction) : env.PROVINCE;
+  const ns = located(env, env.PROVINCE);
   return ns.get(ns.idFromName(prov));
 }
 
@@ -35,7 +33,8 @@ let dayKeyCache: { day: string; key: string } | undefined;
 async function dayKey(env: Env, now: number): Promise<string> {
   const today = new Date(now).toISOString().slice(0, 10);
   if (dayKeyCache?.day !== today) {
-    dayKeyCache = await env.KEYS.get(env.KEYS.idFromName("global")).dayKey();
+    const ns = located(env, env.KEYS);
+    dayKeyCache = await ns.get(ns.idFromName("global")).dayKey();
   }
   return dayKeyCache.key;
 }

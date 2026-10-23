@@ -11,6 +11,8 @@ const KB = 1024;
 
 // [regex sul percorso relativo, budget in byte brotli]. Il primo che corrisponde vince.
 const BUDGETS: Array<[RegExp, number]> = [
+  // Le pagine legali sono lunghe per necessità, ma non fanno parte della prima vista.
+  [/^(privacy|termini|cookie)\.html$/, 12 * KB],
   [/\.html$/, 6 * KB],
   [/\.css$/, 4 * KB],
   [/\.js$/, 20 * KB],

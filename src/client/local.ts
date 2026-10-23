@@ -3,13 +3,16 @@
 
 import type { MapsApp } from "./nav.ts";
 
-const K = {
+/** Elenco completo: la cookie policy deve citarle tutte (lo verifica scripts/legal-pages.test.ts). */
+export const STORAGE_KEYS = {
   token: "qui.token",
   notice: "qui.notice",
   maps: "qui.maps",
   helped: "qui.helped",
   fuel: "qui.fuel",
 } as const;
+const K = STORAGE_KEYS;
+const PREFIX = "qui.";
 
 function get(key: string): string | null {
   try {
@@ -69,3 +72,36 @@ export function incrementHelped(): number {
 
 export const savedFuel = () => get(K.fuel);
 export const saveFuel = (fuel: string) => set(K.fuel, fuel);
+
+// ------------------------------------------------------------------ pagina "I tuoi dati"
+
+const LABELS: Record<string, string> = {
+  [K.token]: "Codice anti-spam del giorno",
+  [K.notice]: "Hai già letto l'avviso sulle segnalazioni",
+  [K.maps]: "App di navigazione preferita",
+  [K.helped]: "Quante volte hai aiutato",
+  [K.fuel]: "Carburante scelto nel filtro",
+};
+
+function ourKeys(): string[] {
+  try {
+    return Object.keys(localStorage).filter((k) => k.startsWith(PREFIX));
+  } catch {
+    return [];
+  }
+}
+
+/** Tutto ciò che QUI ha salvato su questo dispositivo, anche chiavi di versioni precedenti. */
+export function storedData(): Array<{ key: string; label: string; value: string }> {
+  return ourKeys().map((key) => ({ key, label: LABELS[key] ?? key, value: get(key) ?? "" }));
+}
+
+export function clearStoredData(): void {
+  for (const key of ourKeys()) {
+    try {
+      localStorage.removeItem(key);
+    } catch {
+      // archivio non accessibile: non c'è nulla da cancellare
+    }
+  }
+}

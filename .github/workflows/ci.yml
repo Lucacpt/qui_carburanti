@@ -41,6 +41,8 @@ jobs:
       - run: npm run build
       - run: npm run privacy-guard
       - run: npm run budget
+      # Solo informativo: il rilascio userà `--strict` e si fermerà sui segnaposto.
+      - run: npm run legal-check
 
   smoke:
     # Avvia QUI con il runtime Cloudflare locale (Durable Objects reali) e prova le API end-to-end.
