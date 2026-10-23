@@ -2,11 +2,13 @@ name: Deploy
 
 # main → staging (staging.quicarburanti.it) + smoke test completo.
 # tag v* → staging + smoke, poi produzione (quicarburanti.it) + smoke in sola lettura.
+# "Run workflow" (manuale, da main) → solo staging + smoke.
 # Procedura e configurazione una tantum: docs/procedure/rilascio.md
 on:
   push:
     branches: [main]
     tags: ["v*"]
+  workflow_dispatch:
 
 permissions: {}
 

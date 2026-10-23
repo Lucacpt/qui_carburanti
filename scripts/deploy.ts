@@ -9,11 +9,25 @@ import { randomBytes } from "node:crypto";
 import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { isWorkerMissing } from "./wrangler-errors.ts";
 
 const target = process.argv[2];
 if (target !== "staging" && target !== "production") {
   console.error("Uso: node scripts/deploy.ts staging|production");
   process.exit(2);
+}
+// In CI token e account arrivano dall'environment GitHub (in locale basta `wrangler login`).
+if (process.env.GITHUB_ACTIONS === "true") {
+  const missing = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"].filter((k) => !process.env[k]);
+  if (missing.length > 0) {
+    console.error(
+      `Mancano ${missing.join(" e ")} nell'environment GitHub "${target}".\n` +
+        "Settings → Environments → " +
+        `${target}: il token va in "Environment secrets", l'Account ID in "Environment variables". ` +
+        "Poi Re-run jobs (docs/procedure/rilascio.md).",
+    );
+    process.exit(1);
+  }
 }
 // La radice di wrangler.jsonc è la produzione: --env= vuoto la seleziona in modo esplicito.
 const envFlag = `--env=${target === "production" ? "" : target}`;
@@ -26,7 +40,7 @@ function wrangler(args: string[], options: SpawnSyncOptions = {}) {
   });
 }
 
-/** true/false se il Worker esiste; al primo deploy il Worker non c'è ancora (errore 10007). */
+/** Se il Worker ha già POW_SECRET; al primo deploy il Worker non esiste ancora. */
 function hasPowSecret(): boolean {
   const list = wrangler(["secret", "list", "--format", "json"]);
   const out = `${list.stdout ?? ""}${list.stderr ?? ""}`;
@@ -36,7 +50,7 @@ function hasPowSecret(): boolean {
     }[];
     return secrets.some((s) => s.name === "POW_SECRET");
   }
-  if (/10007|does not exist/i.test(out)) return false;
+  if (isWorkerMissing(out)) return false;
   // Qualsiasi altro errore (token, rete): fermarsi, non rigenerare un segreto che forse esiste.
   console.error(out);
   throw new Error("Impossibile leggere i secret del Worker");
