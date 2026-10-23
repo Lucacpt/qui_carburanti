@@ -17,6 +17,18 @@ export class HttpError extends Error {
   }
 }
 
+/**
+ * If-None-Match con confronto debole (RFC 9110 §13.1.2). Cloudflare, quando comprime, trasforma
+ * l'ETag in W/"…" e il browser lo rimanda così: il confronto esatto non darebbe mai 304.
+ */
+export function etagMatches(ifNoneMatch: string | null, etag: string | null): boolean {
+  if (!ifNoneMatch || !etag) return false;
+  if (ifNoneMatch.trim() === "*") return true;
+  const opaque = (tag: string) => tag.trim().replace(/^W\//, "");
+  const target = opaque(etag);
+  return ifNoneMatch.split(",").some((tag) => opaque(tag) === target);
+}
+
 export async function readJson(request: Request, maxBytes = MAX_BODY_BYTES): Promise<unknown> {
   const text = await request.text();
   if (text.length > maxBytes) throw new HttpError(413, "richiesta troppo grande");
