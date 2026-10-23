@@ -153,6 +153,78 @@ describe("ProvinceStore — ultimo stato noto e segnalazioni dell'ultima ora", (
   });
 });
 
+describe("ProvinceStore — area admin (ADR-0013)", () => {
+  const HOUR = 60 * MIN;
+
+  it("panoramica: avvisi da vedere, contestazioni con contatto, sola lettura", () => {
+    for (let i = 0; i < 3; i++) store.report(rep({ has: false }), T0 + i * MIN);
+    store.contest(
+      { prov: "AV", id: STATION, fuel: "B", reason: "has_fuel", contact: "x@y.it", pow: "" },
+      T0 + 5 * MIN,
+    );
+    const o = store.adminOverview(T0 + 6 * MIN);
+    expect(o.alerts.map((a) => a.kind).sort()).toEqual(["contest", "red_pending"]);
+    expect(o.contests[0]).toMatchObject({ station: STATION, contact: "x@y.it", status: "new" });
+    expect(o.readOnly).toBe(false);
+    expect(o.lastHour).toBe(3);
+
+    store.ackAlerts(
+      o.alerts.map((a) => a.id),
+      T0 + 7 * MIN,
+    );
+    expect(store.adminOverview(T0 + 8 * MIN).alerts).toEqual([]);
+  });
+
+  it("congelamento e sblocco: lo stato mostrato cambia e ogni azione resta nel registro", () => {
+    for (let i = 0; i < 3; i++) store.report(rep(), T0 + i * MIN);
+    store.adminFreeze(STATION, "Il gestore segnala: impianto chiuso", 2, T0 + 5 * MIN);
+    let snap = JSON.parse(store.snapshot("AV", T0 + 6 * MIN).body) as {
+      s: number[][];
+      fz: unknown;
+    };
+    expect(snap.s[0]?.[2]).toBe(State.AMBER);
+    expect(store.adminOverview(T0 + 6 * MIN).frozen[0]).toMatchObject({
+      until: T0 + 5 * MIN + 2 * HOUR,
+    });
+
+    expect(store.unfreeze(STATION, T0 + 10 * MIN)).toBe(true);
+    expect(store.unfreeze(STATION, T0 + 11 * MIN)).toBe(false);
+    snap = JSON.parse(store.snapshot("AV", T0 + 12 * MIN).body) as { s: number[][]; fz: unknown };
+    expect(snap.s[0]?.[2]).toBe(State.GREEN);
+
+    const h = store.stationHistory(STATION, T0 + 12 * MIN);
+    expect(h.transitions.map((t) => t.cause)).toEqual(
+      expect.arrayContaining(["report", "freeze", "unfreeze"]),
+    );
+    expect(store.adminOverview(T0 + 12 * MIN).log.map((l) => l.action)).toEqual([
+      "unfreeze",
+      "freeze",
+    ]);
+  });
+
+  it("sola lettura e stato delle contestazioni passano dal registro delle azioni", () => {
+    store.adminReadOnly(true, T0);
+    expect(store.report(rep(), T0 + MIN)).toBe("read_only");
+    store.contest(
+      { prov: "AV", id: STATION, fuel: undefined, reason: "other", contact: undefined, pow: "" },
+      T0,
+    );
+    const id = store.adminOverview(T0).contests[0]?.id ?? 0;
+    expect(store.setContestStatus(id, "closed", T0 + MIN)).toBe(true);
+    expect(store.setContestStatus(9999, "closed", T0 + MIN)).toBe(false);
+    expect(store.adminOverview(T0 + 2 * MIN).log.map((l) => l.detail)).toEqual([
+      `contestazione ${id}: closed`,
+      "attivata",
+    ]);
+  });
+
+  it("il registro delle azioni si cancella dopo 180 giorni", () => {
+    store.adminReadOnly(false, T0);
+    store.maintenance(T0 + 180 * 24 * HOUR);
+    expect(rows("SELECT * FROM admin_log")).toHaveLength(0);
+  });
+});
+
 describe("ProvinceStore — manutenzione e conservazione dei dati", () => {
   it("dopo 8 ore le segnalazioni vengono cancellate e lo stato torna grigio", () => {
     store.report(rep(), T0);

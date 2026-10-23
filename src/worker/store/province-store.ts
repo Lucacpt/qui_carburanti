@@ -47,6 +47,8 @@ export const RETENTION = {
   statsMs: 90 * DAY,
   /** Ultima disponibilità confermata, mostrata sul grigio ("ieri alle 22:10"). */
   lastGreenMs: DAY,
+  /** Azioni dell'admin (congelamenti, sola lettura…): servono a rendere conto delle decisioni. */
+  adminLogMs: 180 * DAY,
 } as const;
 
 const SNAPSHOT_TTL_MS = 30_000;
@@ -80,7 +82,55 @@ const SCHEMA = [
      pos INTEGER NOT NULL DEFAULT 0, neg INTEGER NOT NULL DEFAULT 0,
      dropped INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (hour, fuel))`,
   "CREATE TABLE IF NOT EXISTS config (k TEXT PRIMARY KEY, v TEXT NOT NULL)",
+  // ADR-0013: registro delle azioni admin. Nessun dato degli utenti, solo cosa è stato deciso.
+  `CREATE TABLE IF NOT EXISTS admin_log (id INTEGER PRIMARY KEY, ts INTEGER NOT NULL,
+     action TEXT NOT NULL, station INTEGER, detail TEXT)`,
 ];
+
+export interface AdminOverview {
+  readonly readOnly: boolean;
+  readonly lastHour: number;
+  readonly alerts: Array<{
+    id: number;
+    ts: number;
+    kind: string;
+    station: number | null;
+    fuel: string | null;
+    detail: string | null;
+  }>;
+  readonly contests: Array<{
+    id: number;
+    ts: number;
+    station: number;
+    fuel: string | null;
+    reason: string;
+    contact: string | null;
+    status: string;
+  }>;
+  readonly frozen: Array<{ station: number; until: number; note: string }>;
+  readonly stats: Array<{ hour: number; fuel: string; pos: number; neg: number; dropped: number }>;
+  readonly log: Array<{
+    ts: number;
+    action: string;
+    station: number | null;
+    detail: string | null;
+  }>;
+}
+
+export interface StationHistory {
+  readonly transitions: Array<{
+    ts: number;
+    fuel: string;
+    from_state: number | null;
+    to_state: number;
+    flags: number;
+    confirmations: number;
+    absences: number;
+    cause: string;
+  }>;
+  readonly contests: AdminOverview["contests"];
+  readonly frozen: { until: number; note: string } | null;
+}
 
 /** Segnalazione già validata, con PoW verificato e chiavi anonime calcolate dal Worker. */
 export interface StoreReport {
@@ -104,7 +154,7 @@ export interface SnapshotBody {
   readonly etag: string;
 }
 
-type Cause = "report" | "hold" | "ttl" | "window" | "fresh" | "time" | "freeze";
+type Cause = "report" | "hold" | "ttl" | "window" | "fresh" | "time" | "freeze" | "unfreeze";
 
 interface ReportRow extends Record<string, SqlValue> {
   has: number;
@@ -275,6 +325,7 @@ export class ProvinceStore {
     this.sql.exec("DELETE FROM contests WHERE ts <= ?", now - RETENTION.contestsMs);
     this.sql.exec("DELETE FROM alerts WHERE ts <= ?", now - RETENTION.alertsMs);
     this.sql.exec("DELETE FROM last_green WHERE ts <= ?", now - RETENTION.lastGreenMs);
+    this.sql.exec("DELETE FROM admin_log WHERE ts <= ?", now - RETENTION.adminLogMs);
     this.sql.exec(
       "DELETE FROM stats_hourly WHERE hour <= ?",
       Math.floor((now - RETENTION.statsMs) / HOUR),
@@ -301,6 +352,7 @@ export class ProvinceStore {
       q(`SELECT MIN(ts) + ${RETENTION.contactMs} AS t FROM contests WHERE contact IS NOT NULL`),
       q(`SELECT MIN(ts) + ${RETENTION.contestsMs} AS t FROM contests`),
       q(`SELECT MIN(ts) + ${RETENTION.alertsMs} AS t FROM alerts`),
+      q(`SELECT MIN(ts) + ${RETENTION.adminLogMs} AS t FROM admin_log`),
       q(`SELECT MIN(hour) * ${HOUR} + ${RETENTION.statsMs} AS t FROM stats_hourly`),
       q("SELECT MIN(expires) AS t FROM abuse"),
       q("SELECT MIN(expires) AS t FROM pow_used"),
@@ -343,6 +395,116 @@ export class ProvinceStore {
       this.logTransition(id, fuel as Fuel, now, { state }, shown, "freeze");
     }
     this.cache = undefined;
+  }
+
+  // ---------------------------------------------------------------- area admin (ADR-0013)
+
+  adminOverview(now: number): AdminOverview {
+    return {
+      readOnly: this.isReadOnly(),
+      lastHour: this.count("SELECT COUNT(*) AS n FROM reports WHERE ts > ?", now - HOUR),
+      alerts: this.sql
+        .exec<AdminOverview["alerts"][number]>(
+          "SELECT id, ts, kind, station, fuel, detail FROM alerts WHERE sent = 0 ORDER BY ts DESC LIMIT 200",
+        )
+        .toArray(),
+      contests: this.sql
+        .exec<AdminOverview["contests"][number]>(
+          "SELECT id, ts, station, fuel, reason, contact, status FROM contests ORDER BY ts DESC LIMIT 200",
+        )
+        .toArray(),
+      frozen: this.sql
+        .exec<AdminOverview["frozen"][number]>(
+          "SELECT station, until, note FROM frozen WHERE until > ? ORDER BY until",
+          now,
+        )
+        .toArray(),
+      stats: this.sql
+        .exec<AdminOverview["stats"][number]>(
+          "SELECT hour, fuel, pos, neg, dropped FROM stats_hourly WHERE hour >= ? ORDER BY hour",
+          Math.floor((now - DAY) / HOUR),
+        )
+        .toArray(),
+      log: this.sql
+        .exec<AdminOverview["log"][number]>(
+          "SELECT ts, action, station, detail FROM admin_log ORDER BY ts DESC, id DESC LIMIT 50",
+        )
+        .toArray(),
+    };
+  }
+
+  stationHistory(id: number, now: number): StationHistory {
+    const frozen = this.first<{ until: number; note: string }>(
+      "SELECT until, note FROM frozen WHERE station = ? AND until > ?",
+      id,
+      now,
+    );
+    return {
+      transitions: this.sql
+        .exec<StationHistory["transitions"][number]>(
+          `SELECT ts, fuel, from_state, to_state, flags, confirmations, absences, cause
+           FROM transitions WHERE station = ? ORDER BY ts DESC LIMIT 500`,
+          id,
+        )
+        .toArray(),
+      contests: this.sql
+        .exec<AdminOverview["contests"][number]>(
+          "SELECT id, ts, station, fuel, reason, contact, status FROM contests WHERE station = ? ORDER BY ts DESC",
+          id,
+        )
+        .toArray(),
+      frozen: frozen ?? null,
+    };
+  }
+
+  ackAlerts(ids: readonly number[], now: number): void {
+    for (const id of ids) this.sql.exec("UPDATE alerts SET sent = 1 WHERE id = ?", id);
+    this.logAdmin("ack", null, `${ids.length} avvisi visti`, now);
+  }
+
+  /** `false` se la contestazione non esiste (o è già stata cancellata dopo 180 giorni). */
+  setContestStatus(id: number, status: string, now: number): boolean {
+    const c = this.first<{ station: number }>("SELECT station FROM contests WHERE id = ?", id);
+    if (!c) return false;
+    this.sql.exec("UPDATE contests SET status = ? WHERE id = ?", status, id);
+    this.logAdmin("contest", c.station, `contestazione ${id}: ${status}`, now);
+    return true;
+  }
+
+  adminFreeze(id: number, note: string, hours: number, now: number): void {
+    this.freeze(id, note, now, hours * HOUR);
+    this.logAdmin("freeze", id, `${hours} h · ${note}`, now);
+  }
+
+  /** `false` se l'impianto non era congelato. */
+  unfreeze(id: number, now: number): boolean {
+    if (!this.first("SELECT 1 AS x FROM frozen WHERE station = ?", id)) return false;
+    this.sql.exec("DELETE FROM frozen WHERE station = ?", id);
+    const fuels = this.sql
+      .exec<{ fuel: string }>("SELECT fuel FROM current WHERE station = ?", id)
+      .toArray();
+    for (const { fuel } of fuels) {
+      const computed = this.stateOf(id, fuel as Fuel, now);
+      this.logTransition(id, fuel as Fuel, now, { state: State.AMBER }, computed, "unfreeze");
+    }
+    this.cache = undefined;
+    this.logAdmin("unfreeze", id, null, now);
+    return true;
+  }
+
+  adminReadOnly(on: boolean, now: number): void {
+    this.setReadOnly(on);
+    this.logAdmin("read_only", null, on ? "attivata" : "disattivata", now);
+  }
+
+  private logAdmin(action: string, station: number | null, detail: string | null, now: number) {
+    this.sql.exec(
+      "INSERT INTO admin_log (ts, action, station, detail) VALUES (?, ?, ?, ?)",
+      now,
+      action,
+      station,
+      detail,
+    );
   }
 
   pendingAlerts(): Array<{

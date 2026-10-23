@@ -88,7 +88,7 @@ Vuoi accedere all'ambiente di prova o aiutarci a testare? Apri una [issue](https
 - [x] Informativa privacy, termini d'uso, pagina cookie, registro dei trattamenti (bozze in revisione legale)
 - [x] Nuova icona
 - [ ] Nuovo design dell'interfaccia (contrasti, «Annulla» entro 5 secondi, tema scuro)
-- [ ] Dashboard di amministrazione
+- [x] Dashboard di amministrazione: avvisi, contestazioni, congelamenti, sola lettura, storico ([ADR-0013](docs/adr/ADR-0013-area-admin.md))
 - [ ] Pipeline di rilascio con ambiente di prova
 - [ ] Notifiche push
 

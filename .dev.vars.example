@@ -3,3 +3,6 @@
 POW_SECRET=solo-per-sviluppo-locale-non-usare-in-produzione
 # workerd (runtime locale) non supporta la giurisdizione UE dei Durable Objects: in locale si disattiva.
 DO_JURISDICTION=none
+# Area admin senza Cloudflare Access, SOLO su localhost (http://127.0.0.1:8787/admin).
+# In produzione è ignorata: servono i secret ACCESS_TEAM_DOMAIN, ACCESS_AUD e ADMIN_EMAILS.
+ADMIN_DEV=1
