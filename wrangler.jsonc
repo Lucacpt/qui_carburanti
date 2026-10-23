@@ -3,6 +3,12 @@
   "name": "qui",
   "main": "src/worker/index.ts",
   "compatibility_date": "2026-10-01",
+  // La radice è la produzione: solo il dominio. Niente *.workers.dev né URL di anteprima, che
+  // userebbero gli stessi Durable Objects e scriverebbero dati reali (SDD §12). www → apex è una
+  // Redirect Rule di Cloudflare: il Worker non la vede (docs/procedure/rilascio.md).
+  "workers_dev": false,
+  "preview_urls": false,
+  "routes": [{ "pattern": "quicarburanti.it", "custom_domain": true }],
   // Costruisce public/app.js e public/pow.js prima di `wrangler dev` e `wrangler deploy`.
   "build": { "command": "node scripts/build-client.ts" },
   "assets": {
@@ -38,8 +44,27 @@
   },
   // POW_SECRET è un secret: `wrangler secret put POW_SECRET` (in locale: file .dev.vars)
   // Niente log applicativi in produzione (NFR-PR6). Si riattivano solo per il debug.
-  "observability": { "enabled": false }
+  "observability": { "enabled": false },
   // Nessun "placement" di proposito: il Worker gira nel data center più vicino a chi lo usa (in
   // Italia per chi è in Italia). Il placement per regione è best effort e non garantisce dove
   // passano i dati; decifrare HTTPS solo nell'UE richiede Regional Services (Enterprise). ADR-0012.
+  "env": {
+    // Worker "qui-staging": Durable Objects propri, quindi dati separati dalla produzione.
+    // routes si eredita: va ridefinito, o lo staging si prenderebbe il dominio di produzione.
+    // vars e binding non si ereditano: vanno ripetuti (scripts/deploy-policy.test.ts lo controlla).
+    "staging": {
+      "routes": [{ "pattern": "staging.quicarburanti.it", "custom_domain": true }],
+      "durable_objects": {
+        "bindings": [
+          { "name": "PROVINCE", "class_name": "ProvinceDO" },
+          { "name": "KEYS", "class_name": "KeyDO" }
+        ]
+      },
+      "ratelimits": [
+        { "name": "RL_REPORT", "namespace_id": "1002", "simple": { "limit": 30, "period": 60 } }
+      ],
+      "vars": { "PROVINCES": "AV", "DO_JURISDICTION": "eu", "POW_MAX": "50000" },
+      "observability": { "enabled": false }
+    }
+  }
 }

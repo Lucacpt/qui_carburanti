@@ -323,29 +323,26 @@ Override: se `stations.frozen_until > now` → stato congelato, flag `1`.
 | Rotazione chiave (00:00 UTC) | Le segnalazioni a cavallo contano come segnalatori diversi. Effetto trascurabile, accettato |
 | Fine crisi | Flag globale `archived`: banner "Servizio sospeso", snapshot congelato, dataset aggregato pubblicato |
 
-## 12. CI/CD (design; implementazione dopo la creazione della repo)
+## 12. CI/CD (implementato; procedura: [docs/procedure/rilascio.md](procedure/rilascio.md))
 
 ```
-PR ──▶ ci.yml ──────────────────────────────────────────────────────────────────┐
-       ├ lint + format (Biome)      ├ typecheck (tsc --noEmit)                  │
-       ├ unit test domain (Vitest, coverage ≥ 90%)                              │
-       ├ integration test worker (@cloudflare/vitest-pool-workers, DO reali)    │
-       ├ privacy-guard: test che lo schema rifiuta lat/lon, grep vietati        │
-       │  (console.log su header IP, fetch verso domini esterni, document.cookie)│
-       ├ bundle-budget (script Node + zlib brotli, fallisce oltre budget)       │
-       ├ dependency-review + npm audit (high)                                   │
-       ├ CodeQL (JS/TS)              ├ gitleaks (segreti)                       │
-       └ preview deploy su worker "qui-staging" (solo PR dallo stesso repo)     │
-main ─▶ deploy-staging.yml ──▶ smoke test e2e (Playwright, 1 scenario)          │
-tag v* ▶ release.yml ── environment "production" (approvazione manuale) ──▶    │
-       build riproducibile → attestazione provenance (SLSA) → wrangler deploy   │
-       → hash del bundle pubblicato nella release e mostrato in /trasparenza    │
-cron ──▶ scorecard.yml (OpenSSF) · dependabot (settimanale, raggruppato)        │
+PR ──────▶ ci.yml: lint e formato (Biome) · typecheck · Vitest (dominio, store con node:sqlite,
+           politiche UE e di deploy su wrangler.jsonc, pagine legali) · build · privacy-guard ·
+           budget · smoke e2e locale (wrangler dev, DO reali)
+           + codeql.yml · dependency-review.yml
+main ────▶ deploy.yml / staging: stessi controlli → deploy "qui-staging" su staging.quicarburanti.it
+           → smoke e2e completo (segnalazioni, PoW, contestazioni, area admin chiusa)
+tag v* ──▶ deploy.yml / staging (come sopra) → production: environment con approvazione manuale,
+           tag = package.json, legal-check --strict → deploy "qui" su quicarburanti.it
+           → smoke in sola lettura
+dependabot (settimanale, 7 giorni di attesa, raggruppato)
 ```
-- **Tutte le action pinnate per SHA**, `permissions: {}` di default e `step-security/harden-runner` per limitare l'egress.
+- **Tutte le action pinnate per SHA**, `permissions: {}` di default e `step-security/harden-runner` (egress in modalità *audit*: passare a *block* dopo aver osservato i primi rilasci).
 - `npm ci --ignore-scripts`: niente script postinstall dalle dipendenze.
-- Token Cloudflare con scope minimo (*Workers Scripts:Edit* su un solo account), salvato **solo** nell'environment `production`/`staging`, mai nelle variabili del repo.
-- **Staging separato** (`qui-staging`, con DO e R2 propri): le *preview version* dei Workers condividono i binding con la produzione e scriverebbero dati reali.
+- Token Cloudflare (modello *Edit Cloudflare Workers*, un account, una zona) salvato **solo** negli environment `staging` e `production`, esposto solo al passo di deploy. Le PR non fanno deploy: codice non revisionato non riceve mai il token.
+- **Staging separato** (`qui-staging`, con DO propri): le *preview version* e `*.workers.dev` sono spenti perché condividono i binding con la produzione. `scripts/deploy-policy.test.ts` verifica che lo staging non erediti il dominio di produzione e ripeta binding e variabili.
+- `POW_SECRET` generato da `scripts/deploy.ts` al primo deploy di ogni ambiente (`--secrets-file`): nessuna persona né GitHub lo conosce.
+- Da fare: attestazione di provenienza (SLSA) con hash del bundle in `/trasparenza`, OpenSSF Scorecard, scansione segreti, test e2e nel browser.
 
 ## 13. Osservabilità senza tracciamento
 - Workers Logs **disattivati** in produzione, oppure attivi con sampling e *senza* header. Logpush disattivato.

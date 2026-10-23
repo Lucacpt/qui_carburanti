@@ -33,6 +33,7 @@
 
 ## Procedure
 - [Segnalare un errore o contestare un'informazione](procedure/contestazioni.md)
+- [Rilascio: staging, produzione, secret, rollback](procedure/rilascio.md)
 
 ## Documenti legali
 - Pagine pubbliche: [informativa privacy](../public/privacy.html), [termini d'uso](../public/termini.html), [cookie](../public/cookie.html)

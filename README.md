@@ -89,7 +89,7 @@ Vuoi accedere all'ambiente di prova o aiutarci a testare? Apri una [issue](https
 - [x] Nuova icona
 - [ ] Nuovo design dell'interfaccia (contrasti, «Annulla» entro 5 secondi, tema scuro)
 - [x] Dashboard di amministrazione: avvisi, contestazioni, congelamenti, sola lettura, storico ([ADR-0013](docs/adr/ADR-0013-area-admin.md))
-- [ ] Pipeline di rilascio con ambiente di prova
+- [x] Pipeline di rilascio con ambiente di prova ([procedura](docs/procedure/rilascio.md))
 - [ ] Notifiche push
 
 ## Documentazione

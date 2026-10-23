@@ -6,6 +6,9 @@
   X-Content-Type-Options: nosniff
   Cross-Origin-Opener-Policy: same-origin
 
+https://staging.quicarburanti.it/*
+  X-Robots-Tag: noindex, nofollow
+
 /admin*
   X-Robots-Tag: noindex, nofollow
   Cache-Control: no-store
