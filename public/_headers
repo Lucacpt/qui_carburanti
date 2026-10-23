@@ -24,3 +24,16 @@ https://staging.quicarburanti.it/*
 /r/manifest.json
   ! Cache-Control
   Cache-Control: public, max-age=300
+
+# File di testo per motori e modelli di IA: UTF-8 esplicito, o gli accenti si rompono.
+/robots.txt
+  ! Content-Type
+  Content-Type: text/plain; charset=utf-8
+
+/llms.txt
+  ! Content-Type
+  Content-Type: text/plain; charset=utf-8
+
+/llms-full.txt
+  ! Content-Type
+  Content-Type: text/plain; charset=utf-8

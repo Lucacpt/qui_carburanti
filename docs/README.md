@@ -12,6 +12,7 @@
 | 05 — rischi legali | Documento riservato del maintainer, non pubblicato nel repository |
 | [06-domande.md](06-domande.md) | Domande aperte, con le risposte del maintainer |
 | [07-report-v0.3.md](07-report-v0.3.md) | **Report v0.3**: decisioni, MVP in 72 h, GitHub, domande residue |
+| [08-seo.md](08-seo.md) | Audit SEO, piano per fasi senza tracciamento, sitemap |
 | [adr/](adr/) | Architecture Decision Records |
 
 ## ADR

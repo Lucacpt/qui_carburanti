@@ -787,16 +787,39 @@ function renderMyData(): HTMLElement {
 
 // ------------------------------------------------------------------ navigazione e aggiornamento
 
+const CANONICAL_ORIGIN = "https://quicarburanti.it";
+
+/**
+ * Canonical della pagina mostrata (docs/08-seo.md). index.html serve anche /d/<id>: un canonical
+ * fisso nell'HTML direbbe ai motori di ricerca che ogni scheda è una copia della home.
+ */
+function setCanonical(path: string | null): void {
+  let link = document.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+  if (path === null) {
+    link?.remove();
+    return;
+  }
+  if (!link) {
+    link = document.createElement("link");
+    link.rel = "canonical";
+    document.head.append(link);
+  }
+  link.href = `${CANONICAL_ORIGIN}${path}`;
+}
+
 function render(): void {
   if (location.pathname === DATA_PATH) {
+    setCanonical(null);
     app.replaceChildren(renderMyData());
     renderBanner();
     return;
   }
   const id = parseStationPath(location.pathname);
   if (id !== null) {
+    setCanonical(`/d/${id}`);
     app.replaceChildren(renderDetail(id));
   } else {
+    setCanonical("/");
     document.title = "QUI — dove c'è carburante, adesso";
     // La lista resta lo stesso elemento: chi sta scrivendo nella ricerca non perde il focus.
     if (listView.parentElement !== app) app.replaceChildren(listView);

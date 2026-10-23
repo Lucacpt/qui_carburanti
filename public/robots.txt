@@ -1,0 +1,9 @@
+# QUI — quicarburanti.it. Le schede dei distributori e le pagine informative sono pubbliche.
+# /r/ resta aperto: serve ai motori di ricerca per mostrare le schede (anagrafica MIMIT).
+User-agent: *
+Allow: /
+Disallow: /api/
+Disallow: /admin
+Disallow: /dati
+
+Sitemap: https://quicarburanti.it/sitemap.xml
