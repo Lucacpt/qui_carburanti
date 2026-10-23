@@ -68,6 +68,10 @@ I tempi di conservazione citati qui e nell'informativa coincidono con le costant
 ### Dati non personali conservati
 - `transitions`: cambi di stato per impianto, **senza** `rkey`/`pkey` (verificato da un test), 30 giorni.
 - `stats_hourly`: totali per ora e carburante, 90 giorni.
+- `last_green`: per impianto e carburante, il minuto dell'ultima conferma da "Disponibile", **senza** `rkey`/`pkey` (verificato da un test), 24 ore (`RETENTION.lastGreenMs`). Si mostra solo quando non c'è uno stato attuale; i vecchi "esaurito" non si registrano.
+- Segnalazioni dell'ultima ora: totale calcolato al momento dello snapshot, non salvato.
+
+Le cancellazioni avvengono anche senza attività: quando non ci sono segnalazioni, il Durable Object si risveglia alla prossima scadenza di un dato (`nextExpiry`).
 - `current`, `frozen`: stato attuale e congelamenti (nota redatta dal titolare, massimo 3 ore).
 
 ### Archiviazione sul dispositivo (art. 122 Codice privacy)

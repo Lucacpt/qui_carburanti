@@ -21,6 +21,9 @@ export type SnapshotRow = [
   QueueInfo["limit"],
 ];
 
+/** [idImpianto, carburante, etàMin]: ultima disponibilità confermata di un carburante oggi grigio. */
+export type LastGreenRow = [number, Fuel, number];
+
 export interface Snapshot {
   readonly v: 1;
   readonly prov: string;
@@ -29,7 +32,23 @@ export interface Snapshot {
   /** Modalità sola lettura attiva. */
   readonly ro: boolean;
   readonly s: SnapshotRow[];
+  /** Ultime disponibilità (fino a 24 ore) dei soli carburanti senza segnalazioni recenti. */
+  readonly lg: LastGreenRow[];
+  /** Segnalazioni accettate nell'ultima ora in provincia: dice se il servizio è vivo. */
+  readonly h: number;
 }
+
+export interface SnapshotExtras {
+  readonly lastGreen: ReadonlyArray<{
+    readonly id: number;
+    readonly fuel: Fuel;
+    readonly ts: number;
+  }>;
+  readonly lastHour: number;
+}
+
+const bucket = (ms: number) =>
+  Math.floor(Math.max(0, Math.floor(ms / 60_000)) / AGE_BUCKET_MIN) * AGE_BUCKET_MIN;
 
 export interface SnapshotEntry {
   readonly id: number;
@@ -49,19 +68,19 @@ export function buildSnapshot(
   now: number,
   entries: readonly SnapshotEntry[],
   readOnly: boolean,
+  extras: SnapshotExtras = { lastGreen: [], lastHour: 0 },
 ): Snapshot {
   const rows: SnapshotRow[] = [];
   for (const e of entries) {
     if (e.result.state === State.GREY && !e.frozen) continue;
     const ts = relevantTs(e.result);
-    const ageMin = ts === null ? 0 : Math.max(0, Math.floor((now - ts) / 60_000));
     rows.push([
       e.id,
       e.fuel,
       e.result.state,
       e.result.confirmations,
       e.result.absences,
-      Math.floor(ageMin / AGE_BUCKET_MIN) * AGE_BUCKET_MIN,
+      ts === null ? 0 : bucket(now - ts),
       e.result.flags | (e.frozen ? Flag.FROZEN : 0),
       reliability(e.result, now),
       e.queue.queue,
@@ -69,7 +88,21 @@ export function buildSnapshot(
     ]);
   }
   rows.sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]));
-  return { v: 1, prov, t: Math.floor(now / 60_000) * 60, ro: readOnly, s: rows };
+  // Solo dove non c'è uno stato attuale: l'ultima disponibilità non deve mai coprirlo.
+  const current = new Set(rows.map((r) => `${r[0]}:${r[1]}`));
+  const lg: LastGreenRow[] = extras.lastGreen
+    .filter((g) => !current.has(`${g.id}:${g.fuel}`))
+    .map((g): LastGreenRow => [g.id, g.fuel, bucket(now - g.ts)])
+    .sort((a, b) => a[0] - b[0] || a[1].localeCompare(b[1]));
+  return {
+    v: 1,
+    prov,
+    t: Math.floor(now / 60_000) * 60,
+    ro: readOnly,
+    s: rows,
+    lg,
+    h: extras.lastHour,
+  };
 }
 
 /** Lato client: ricostruisce lo StateResult (approssimato alla fascia di 5') per le etichette. */

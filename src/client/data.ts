@@ -2,7 +2,7 @@
 
 import type { ProvinceRegistry } from "../domain/mimit.ts";
 import { FUEL_BIT } from "../domain/mimit.ts";
-import type { SnapshotRow } from "../domain/snapshot.ts";
+import type { LastGreenRow, SnapshotRow } from "../domain/snapshot.ts";
 import { FUELS, type Fuel } from "../domain/types.ts";
 import type { Point } from "./geo.ts";
 import { normalize } from "./search.ts";
@@ -32,6 +32,10 @@ export interface SnapshotData {
   readonly readOnly: boolean;
   readonly rows: ReadonlyMap<string, SnapshotRow>;
   readonly frozen: ReadonlyMap<number, string>;
+  /** Ultima disponibilità (ms) dei carburanti senza stato attuale, per chiave rowKey. */
+  readonly lastGreen: ReadonlyMap<string, number>;
+  /** Segnalazioni nell'ultima ora in provincia. */
+  readonly lastHour: number;
 }
 
 export const rowKey = (id: number, fuel: Fuel) => `${id}:${fuel}`;
@@ -74,11 +78,20 @@ export async function loadSnapshot(prov: string): Promise<SnapshotData> {
     ro: boolean;
     s: SnapshotRow[];
     fz?: [number, string][];
+    lg?: LastGreenRow[];
+    h?: number;
   };
   return {
     t: body.t,
     readOnly: body.ro,
     rows: new Map(body.s.map((row) => [rowKey(row[0], row[1]), row])),
     frozen: new Map(body.fz ?? []),
+    lastGreen: new Map(
+      (body.lg ?? []).map(([id, fuel, ageMin]) => [
+        rowKey(id, fuel),
+        body.t * 1000 - ageMin * 60_000,
+      ]),
+    ),
+    lastHour: body.h ?? 0,
   };
 }

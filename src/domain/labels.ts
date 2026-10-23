@@ -25,16 +25,47 @@ export function ago(ms: number | null, now: number): string {
   return rest === 0 ? `${h} h fa` : `${h} h ${rest} min fa`;
 }
 
+const TIME = new Intl.DateTimeFormat("it-IT", {
+  timeZone: "Europe/Rome",
+  hour: "2-digit",
+  minute: "2-digit",
+});
+const DAY = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Rome" });
+
+/** "oggi alle 06:10", "ieri alle 22:10": un orario assoluto si legge meglio di "16 h fa". */
+export function clock(ms: number, now: number): string {
+  const d = DAY.format(ms);
+  const day =
+    d === DAY.format(now) ? "oggi" : d === DAY.format(now - 86_400_000) ? "ieri" : `il ${d}`;
+  return `${day} alle ${TIME.format(ms)}`;
+}
+
 const people = (n: number) => (n === 1 ? "1 persona" : `${n} persone`);
 const reports = (n: number) => (n === 1 ? "1 segnalazione" : `${n} segnalazioni`);
 const confirmations = (n: number) => (n === 1 ? "1 conferma" : `${n} conferme`);
 
-export function describeState(s: StateResult, now: number): StateLabel {
+/**
+ * `lastGreenMs`: quando il carburante è stato confermato disponibile l'ultima volta (fino a 24 ore,
+ * dal registro anonimo). Si mostra solo sul grigio e solo per le disponibilità: un vecchio
+ * "esaurito" non viene mai riproposto (ADR-0011, B).
+ */
+export function describeState(
+  s: StateResult,
+  now: number,
+  lastGreenMs: number | null = null,
+): StateLabel {
   const hasAbsences = s.absences > 0;
   const lastAbs = ago(s.lastAbsenceMs, now);
   const lastConf = ago(s.lastConfirmMs, now);
 
   if (s.state === State.GREY) {
+    if (lastGreenMs !== null) {
+      return {
+        title: "Nessuna informazione recente",
+        detail: `ultima disponibilità segnalata ${clock(lastGreenMs, now)}`,
+        operatorLink: false,
+      };
+    }
     return {
       title: "Nessuna informazione",
       detail: "Nessuna segnalazione nelle ultime 8 ore",

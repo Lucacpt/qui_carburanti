@@ -41,6 +41,7 @@ const EXPECTED: Record<string, string> = {
   contestsMs: duration(RETENTION.contestsMs),
   transitionsMs: duration(RETENTION.transitionsMs),
   statsMs: duration(RETENTION.statsMs),
+  lastGreenMs: duration(RETENTION.lastGreenMs),
 };
 
 const page = (name: string) =>

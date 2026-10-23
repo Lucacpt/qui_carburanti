@@ -45,16 +45,26 @@ export class ProvinceDO extends DurableObject<Env> {
     await this.loadRegistry(prov, now);
     if (!this.store.knowsStation(input.id)) return "invalid_station";
     this.store.contest(input, now);
+    // Il contatto va cancellato dopo 30 giorni anche se nessuno segnala più nulla.
+    await this.ensureAlarm(now);
     return "ok";
   }
 
+  /** Ogni minuto finché ci sono segnalazioni; poi solo alla prossima scadenza di un dato. */
   override async alarm(): Promise<void> {
     const now = Date.now();
-    if (this.store.maintenance(now)) await this.ctx.storage.setAlarm(now + ALARM_EVERY_MS);
+    if (this.store.maintenance(now)) {
+      await this.ctx.storage.setAlarm(now + ALARM_EVERY_MS);
+      return;
+    }
+    const next = this.store.nextExpiry();
+    if (next !== null) await this.ctx.storage.setAlarm(Math.max(next, now + ALARM_EVERY_MS));
   }
 
+  /** Anticipa anche un alarm lontano (una scadenza tra giorni): con attività serve ogni minuto. */
   private async ensureAlarm(now: number): Promise<void> {
-    if ((await this.ctx.storage.getAlarm()) === null) {
+    const at = await this.ctx.storage.getAlarm();
+    if (at === null || at > now + ALARM_EVERY_MS) {
       await this.ctx.storage.setAlarm(now + ALARM_EVERY_MS);
     }
   }
