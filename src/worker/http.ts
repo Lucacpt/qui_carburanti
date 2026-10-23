@@ -6,8 +6,24 @@ const MAX_BODY_BYTES = 1024;
 
 export const json = (data: unknown, status = 200, extra: Record<string, string> = {}) =>
   withSecurityHeaders(
-    Response.json(data, { status, headers: { "Cache-Control": "no-store", ...extra } }),
+    Response.json(data, {
+      status,
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": "no-store",
+        ...extra,
+      },
+    }),
   );
+
+/**
+ * L'unico errore visibile all'esterno. Chi sonda le API non scopre quale controllo è fallito
+ * (firma, scadenza, campo vietato…); chi usa l'app legge solo un invito a riprovare.
+ * Fanno eccezione, di proposito, 202 (accettata o scartata in silenzio) e il 503 della sola lettura.
+ */
+export const GENERIC_ERROR = "Richiesta non riuscita. Riprova.";
+export const notFound = (extra: Record<string, string> = {}) =>
+  json({ ok: false, error: GENERIC_ERROR }, 404, extra);
 
 export class HttpError extends Error {
   readonly status: number;

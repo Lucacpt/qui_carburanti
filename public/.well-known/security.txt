@@ -1,0 +1,6 @@
+# Segnalare una vulnerabilità di QUI (RFC 9116). Grazie se ci aiuti.
+Contact: https://github.com/Lucacpt/qui_carburanti/security/advisories/new
+Expires: 2027-10-24T00:00:00.000Z
+Preferred-Languages: it, en
+Canonical: https://quicarburanti.it/.well-known/security.txt
+Policy: https://github.com/Lucacpt/qui_carburanti/blob/main/SECURITY.md
