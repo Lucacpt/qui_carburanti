@@ -4,21 +4,34 @@
 
 import { ORIGIN } from "./sitemap.ts";
 
+// &lt; e &gt; restano come testo: decodificarli rimetterebbe nel file le parentesi angolari che
+// stripTags ha appena tolto.
 const ENTITIES: Record<string, string> = {
   "&amp;": "&",
-  "&lt;": "<",
-  "&gt;": ">",
   "&quot;": '"',
   "&#39;": "'",
   "&nbsp;": " ",
 };
+
+/**
+ * Toglie i tag fino a che il testo non cambia più, poi ogni "<" o ">" rimasto: una sola passata
+ * lascerebbe "<script>" da un input come "<scr<script>ipt>" (CodeQL, sanitizzazione incompleta).
+ */
+function stripTags(text: string): string {
+  let out = text;
+  for (let prev = ""; prev !== out; ) {
+    prev = out;
+    out = out.replace(/<[^<>]*>/g, "");
+  }
+  return out.replace(/[<>]/g, "");
+}
 
 const absolute = (href: string) => (href.startsWith("/") ? `${ORIGIN}${href}` : href);
 
 /** Il contenuto di <main> in Markdown semplice: titoli, elenchi, paragrafi e link assoluti. */
 export function htmlToText(html: string): string {
   const main = /<main[^>]*>([\s\S]*?)<\/main>/.exec(html)?.[1] ?? "";
-  return main
+  const marked = main
     .replace(
       /<a [^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/g,
       (_, href, t) => `[${t}](${absolute(href)})`,
@@ -27,8 +40,8 @@ export function htmlToText(html: string): string {
     .replace(/<h3[^>]*>([\s\S]*?)<\/h3>/g, "\n\n### $1\n\n")
     .replace(/<li[^>]*>/g, "\n- ")
     .replace(/<\/p>/g, "\n")
-    .replace(/<br\s*\/?>/g, "\n")
-    .replace(/<[^>]+>/g, "")
+    .replace(/<br\s*\/?>/g, "\n");
+  return stripTags(marked)
     .replace(/&[a-z#0-9]+;/g, (e) => ENTITIES[e] ?? e)
     .split("\n")
     .map((line) => line.replace(/\s+/g, " ").trim())

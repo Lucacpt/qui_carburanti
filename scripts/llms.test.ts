@@ -13,6 +13,17 @@ describe("htmlToText", () => {
       `## Titolo\n\nVedi la [privacy](${ORIGIN}/privacy) & altro.\n\n- uno\n- due`,
     );
   });
+
+  it("nessun tag sopravvive, nemmeno annidato o spezzato, né rinasce dalle entità", () => {
+    for (const html of [
+      "<main><scr<script>ipt>alert(1)</script></main>",
+      "<main><<b>img src=x onerror=alert(1)>></main>",
+      "<main>&lt;script&gt;alert(1)&lt;/script&gt;</main>",
+      "<main><p>testo</p><script</main>",
+    ]) {
+      expect(htmlToText(html), html).not.toMatch(/[<>]/);
+    }
+  });
 });
 
 describe("llms-full.txt", () => {
