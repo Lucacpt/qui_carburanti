@@ -34,7 +34,7 @@
 
 ### Avvisi
 - [ ] Title senza luogo e senza parole cercate (`index.html`: "QUI — dove c'è carburante, adesso")
-- [ ] Nessun Open Graph: un link condiviso su WhatsApp, il canale principale durante una crisi, non ha anteprima
+- [x] Nessun Open Graph: un link condiviso su WhatsApp, il canale principale durante una crisi, non ha anteprima → fase 1, punto 6
 - [ ] Nessun dato strutturato (`GasStation`, `BreadcrumbList`, `WebSite`)
 - [ ] Nessun manifest PWA, nonostante la CSP preveda `manifest-src`
 - [ ] Redirect `www` → `quicarburanti.it` non ancora attivo (passo in `docs/procedure/rilascio.md`)
@@ -80,7 +80,7 @@ Non ho dati di volume: le priorità vanno verificate in **Google Search Console*
    - Home: `Distributori con carburante in provincia di Avellino — QUI`
    - Scheda: `Agip Eni Calaggio Sud, Vallata: c'è carburante? — QUI` · description: "Segnalazioni in tempo reale degli automobilisti per Agip Eni Calaggio Sud, Autostrada A16, Vallata. Gratis, senza account."
    - Comune: `Distributori a Grottaminarda: dove c'è carburante — QUI`
-6. **Open Graph e Twitter Card** su ogni pagina, con un'immagine 1200×630 (logo e "dove c'è carburante, adesso", dal kit del logo). L'anteprima nei gruppi WhatsApp conta più di qualsiasi posizione su Google durante una crisi.
+6. **Open Graph e Twitter Card** su ogni pagina, con un'immagine 1200×630 (logo e "dove c'è carburante, adesso", dal kit del logo). L'anteprima nei gruppi WhatsApp conta più di qualsiasi posizione su Google durante una crisi. *Fatto:* `public/og.png`, rigenerabile con `node scripts/og-image.ts` da `scripts/og-image.html`; `scripts/social-preview.test.ts` controlla immagine e tag di ogni pagina pubblica. Il testo dell'immagine è generico, senza "a brevissimo", perché le piattaforme la tengono in cache per settimane.
 7. **Dati strutturati JSON-LD**, solo ciò che è vero e stabile:
    - home: `WebSite` e `WebApplication` (gratuita, senza registrazione);
    - schede: `GasStation` (nome, marchio, indirizzo, coordinate pubbliche dell'anagrafica) e `BreadcrumbList` (Home › Comune › Impianto);

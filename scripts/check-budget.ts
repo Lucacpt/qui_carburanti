@@ -19,6 +19,8 @@ const BUDGETS: Array<[RegExp, number]> = [
   [/^r\/manifest\.json$/, 1 * KB],
   [/^r\/.+\.json$/, 40 * KB],
   [/\.svg$/, 2 * KB],
+  // og.png, l'anteprima dei link: le app di messaggistica scartano le immagini pesanti.
+  [/\.png$/, 150 * KB],
   [/^_headers$/, 2 * KB],
 ];
 // Prima vista: shell + stile + script + icona + anagrafica di una provincia (+ snapshot, pochi KB).

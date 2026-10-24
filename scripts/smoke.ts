@@ -67,6 +67,18 @@ async function main() {
       health.headers.get("cross-origin-resource-policy") === "same-origin",
   );
 
+  // Anteprima dei link: i server di WhatsApp e Facebook leggono og:image e scaricano l'immagine.
+  const homeHtml = await home.text();
+  const og = await fetch(`${BASE}/og.png`);
+  check(
+    "anteprima dei link: og:image nella home e /og.png",
+    homeHtml.includes('<meta property="og:image" content="https://quicarburanti.it/og.png">') &&
+      og.ok &&
+      og.headers.get("content-type") === "image/png" &&
+      og.headers.get("cross-origin-resource-policy") === "cross-origin",
+    `${og.status} ${og.headers.get("content-type")} ${og.headers.get("cross-origin-resource-policy")}`,
+  );
+
   // Pagine: l'app risponde su /d/<id>, un indirizzo inventato riceve una vera 404.
   const page = await fetch(`${BASE}/d/${station}`);
   check("scheda /d/<id> → 200", page.status === 200, String(page.status));

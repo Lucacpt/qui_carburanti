@@ -66,6 +66,7 @@ Tutto il resto funziona già: API, area admin (`/admin`, con Cloudflare Access),
 1. *Settings → Environments → production → Environment variables → Add variable*: nome `PUBLIC_LAUNCH`, valore `1`.
 2. *Actions → Deploy*: apri l'ultimo rilascio (`v…`) e premi **Re-run jobs**. In alternativa, fai un nuovo tag di rilascio.
 3. Dopo il lancio, invia la sitemap a Search Console e Bing Webmaster Tools (`docs/08-seo.md`): prima del lancio le schede mostrano la pagina d'attesa.
+4. Aggiorna l'anteprima dei link già condivisi: nel [Debugger di condivisione di Facebook](https://developers.facebook.com/tools/debug/) inserisci `https://quicarburanti.it/` e premi *Scrape Again*, altrimenti Facebook e Instagram mostrano ancora "QUI arriva a brevissimo". WhatsApp non ha un comando equivalente: l'anteprima si aggiorna da sola, nel giro di qualche giorno.
 
 Per tornare alla pagina d'attesa, ad esempio durante un problema serio, togli la variabile e rilancia il job.
 

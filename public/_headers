@@ -25,6 +25,11 @@ https://staging.quicarburanti.it/*
   ! Cache-Control
   Cache-Control: public, max-age=300
 
+# Immagine di anteprima dei link (og:image): pubblica per natura, la mostrano anche altri siti.
+/og.png
+  ! Cross-Origin-Resource-Policy
+  Cross-Origin-Resource-Policy: cross-origin
+
 # File di testo per motori e modelli di IA: UTF-8 esplicito, o gli accenti si rompono.
 /robots.txt
   ! Content-Type
