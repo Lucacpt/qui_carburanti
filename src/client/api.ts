@@ -54,6 +54,23 @@ export type SendResult = { ok: true } | { ok: false; message: string };
 
 /** Mai codici o dettagli tecnici a chi usa l'app: solo cosa fare. */
 export const RETRY_MESSAGE = "Non è andata a buon fine. Riprova tra poco.";
+export const OFFLINE_MESSAGE = "Connessione assente: riprova tra poco";
+
+/**
+ * Il PoW fallisce per due motivi diversi: la rete (fetch della sfida, TypeError) oppure il calcolo
+ * nel Worker. Dire "connessione assente" per il secondo manda chi usa l'app nella direzione sbagliata.
+ */
+export function powFailureMessage(err: unknown): string {
+  return err instanceof TypeError ? OFFLINE_MESSAGE : RETRY_MESSAGE;
+}
+
+async function takePowResult(prov: string): Promise<{ pow: string } | { message: string }> {
+  try {
+    return { pow: await takePow(prov) };
+  } catch (err) {
+    return { message: powFailureMessage(err) };
+  }
+}
 
 async function post(path: string, body: Record<string, unknown>): Promise<SendResult> {
   try {
@@ -70,7 +87,7 @@ async function post(path: string, body: Record<string, unknown>): Promise<SendRe
     }
     return { ok: false, message: RETRY_MESSAGE };
   } catch {
-    return { ok: false, message: "Connessione assente: riprova tra poco" };
+    return { ok: false, message: OFFLINE_MESSAGE };
   }
 }
 
@@ -78,16 +95,16 @@ export async function sendReport(
   prov: string,
   body: { id: number; f: string; h: 0 | 1; n: 0 | 1; tk: string; q?: 1 | 2 | 3; lim?: 0 | 1 },
 ): Promise<SendResult> {
-  const pow = await takePow(prov).catch(() => null);
-  if (!pow) return { ok: false, message: "Connessione assente: riprova tra poco" };
-  return post("/api/report", { p: prov, ...body, pow });
+  const r = await takePowResult(prov);
+  if ("message" in r) return { ok: false, message: r.message };
+  return post("/api/report", { p: prov, ...body, pow: r.pow });
 }
 
 export async function sendContest(
   prov: string,
   body: { id: number; reason: string; contact?: string },
 ): Promise<SendResult> {
-  const pow = await takePow(prov).catch(() => null);
-  if (!pow) return { ok: false, message: "Connessione assente: riprova tra poco" };
-  return post("/api/contest", { p: prov, ...body, pow });
+  const r = await takePowResult(prov);
+  if ("message" in r) return { ok: false, message: r.message };
+  return post("/api/contest", { p: prov, ...body, pow: r.pow });
 }

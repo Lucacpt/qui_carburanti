@@ -43,6 +43,7 @@ Consigliato: *Settings → Rules → Rulesets → New tag ruleset* su `v*`, cos�
 
 ### 3. DNS
 - I record A di Aruba su `quicarburanti.it` e `www` devono essere **eliminati** (fatto il 2026-10-23). Al primo deploy Cloudflare crea da solo i record e i certificati per `quicarburanti.it` e `staging.quicarburanti.it`.
+- *SSL/TLS → Edge Certificates → **Always Use HTTPS***: attivo. Senza, un link senza `https://` (es. nella bio di Instagram, che lo apre in `http://`) carica il sito fuori da HTTPS, dove il browser spegne posizione e crittografia: segnalazioni "da remoto" e PoW che fallisce. L'app passa comunque a `https://` da sola (`src/client/secure.ts`), ma le pagine statiche no.
 - **`www` → `quicarburanti.it`**, dopo il primo deploy in produzione:
   1. *DNS → Records → Add*: tipo `AAAA`, nome `www`, indirizzo `100::`, **Proxied**. L'indirizzo è finto: serve solo a far passare le richieste da Cloudflare.
   2. *Rules → Redirect Rules → Create from template → "Redirect from WWW to root"*, con codice 301.

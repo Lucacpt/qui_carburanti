@@ -43,6 +43,9 @@ export const POSITION_HELP = {
   slow: `Ci sta mettendo un po'. ${OPEN_IN_BROWSER} Oppure scrivi il tuo comune qui sopra.`,
 } as const;
 
+/** Nella segnalazione: senza posizione vale da remoto, ma dal browser si può segnalare dal posto. */
+export const REPORT_REMOTE_HELP = `Posizione non disponibile: la segnalazione varrà come da remoto. Sei al distributore? ${OPEN_IN_BROWSER}`;
+
 /** Il messaggio per un errore di getCurrentPosition (codici 1-3) o di withTimeout. */
 export function positionHelp(err: unknown): string {
   const code = (err as { code?: unknown } | null)?.code;

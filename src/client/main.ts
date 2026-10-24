@@ -35,9 +35,11 @@ import {
   POSITION_SLOW_MS,
   POSITION_WAIT_MS,
   positionHelp,
+  REPORT_REMOTE_HELP,
   withTimeout,
 } from "./position.ts";
 import { findTown, matches, normalize, type Town, townArea } from "./search.ts";
+import { secureUrl } from "./secure.ts";
 import { announce, h, onPullDown, openSheet, reliabilityBadge, STATE_UI } from "./view.ts";
 
 const PROV = "AV";
@@ -673,7 +675,7 @@ function openReport(st: Station, fuel: Fuel, has: boolean): void {
       }
     } catch {
       step(
-        h("p", {}, "Posizione non disponibile: la segnalazione varrà come da remoto."),
+        h("p", {}, REPORT_REMOTE_HELP),
         h("button", { class: "btn primary", onClick: () => proceed(false) }, "Continua"),
       );
     }
@@ -999,4 +1001,7 @@ async function init(): Promise<void> {
   }, REFRESH_MS);
 }
 
-void init();
+// Aperta in http:// (es. link senza "https://" da Instagram): posizione e PoW non funzionerebbero.
+const secure = secureUrl(location);
+if (secure) location.replace(secure);
+else void init();
