@@ -128,3 +128,86 @@ describe("anagrafica nel client", () => {
     expect(fuelsFromMask(FUEL_BIT.H)).toEqual(["H"]);
   });
 });
+
+import { vi } from "vitest";
+import { POSITION_HELP, PositionTimeout, positionHelp, withTimeout } from "./position.ts";
+
+describe("posizione che non arriva (es. browser interno di Instagram)", () => {
+  it("withTimeout smette di aspettare una richiesta senza risposta", async () => {
+    vi.useFakeTimers();
+    try {
+      const never = withTimeout(new Promise<never>(() => {}), 20_000);
+      const check = expect(never).rejects.toBeInstanceOf(PositionTimeout);
+      await vi.advanceTimersByTimeAsync(20_000);
+      await check;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("withTimeout lascia passare risultati ed errori arrivati in tempo", async () => {
+    await expect(withTimeout(Promise.resolve(7), 1_000)).resolves.toBe(7);
+    await expect(withTimeout(Promise.reject({ code: 1 }), 1_000)).rejects.toEqual({ code: 1 });
+  });
+
+  it("permesso negato, API assente o nessuna risposta: suggerisce di aprire nel browser", () => {
+    for (const err of [
+      { code: 1 },
+      new Error("geolocalizzazione non disponibile"),
+      new PositionTimeout(),
+    ]) {
+      expect(positionHelp(err)).toBe(POSITION_HELP.blocked);
+    }
+    expect(POSITION_HELP.blocked).toContain("Apri nel browser");
+  });
+
+  it("posizione non trovata o scaduta: suggerisce il comune", () => {
+    expect(positionHelp({ code: 2 })).toBe(POSITION_HELP.unavailable);
+    expect(positionHelp({ code: 3 })).toBe(POSITION_HELP.unavailable);
+  });
+});
+
+import { PULL_TRIGGER_PX, pullProgress } from "./pull.ts";
+import { townArea } from "./search.ts";
+
+describe("ricerca di un comune che ha distributori: anche i vicini", () => {
+  const town: Town = { name: "Grottaminarda", key: "grottaminarda", lat: 41, lon: 15 };
+  // ~1,1 km per 0,01° di latitudine
+  const st = (name: string, comune: string, dLat: number) => ({
+    name,
+    town: comune,
+    lat: 41 + dLat,
+    lon: 15,
+  });
+  const stations = [
+    st("in paese", "GROTTAMINARDA", 0.01),
+    st("frazione lontana", "Grottaminarda", 0.2),
+    st("comune vicino", "Mirabella Eclano", 0.05),
+    st("altra valle", "Lioni", 0.4),
+  ];
+
+  it("i distributori del comune, anche lontani dal centro, più quelli entro il raggio", () => {
+    expect(
+      townArea(stations, town, 15, 1)
+        .map((s) => s.name)
+        .sort(),
+    ).toEqual(["comune vicino", "frazione lontana", "in paese"]);
+  });
+
+  it("se nel raggio ce ne sono pochi, comunque i più vicini", () => {
+    expect(townArea(stations, town, 1, 3).map((s) => s.name)).toContain("comune vicino");
+  });
+});
+
+describe("tira giù per aggiornare", () => {
+  it("l'indicatore cresce con il dito, fino a un massimo", () => {
+    expect(pullProgress(-20)).toEqual({ height: 0, ready: false });
+    expect(pullProgress(40)).toEqual({ height: 20, ready: false });
+    expect(pullProgress(1000).height).toBe(75);
+  });
+
+  it("al rilascio aggiorna solo oltre la soglia", () => {
+    expect(pullProgress(PULL_TRIGGER_PX - 1).ready).toBe(false);
+    expect(pullProgress(PULL_TRIGGER_PX).ready).toBe(true);
+  });
+});

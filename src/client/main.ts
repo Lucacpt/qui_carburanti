@@ -14,7 +14,7 @@ import {
   type SnapshotData,
   type Station,
 } from "./data.ts";
-import { centroid, distanceKm, formatDistance, NEAR_KM, nearby, type Point } from "./geo.ts";
+import { centroid, distanceKm, formatDistance, NEAR_KM, type Point } from "./geo.ts";
 import {
   clearStoredData,
   currentToken,
@@ -30,8 +30,15 @@ import {
   storedData,
 } from "./local.ts";
 import { directionsUrl, MAPS_APPS, type MapsApp, parseStationPath, stationPath } from "./nav.ts";
-import { findTown, matches, normalize, type Town } from "./search.ts";
-import { announce, h, openSheet, reliabilityBadge, STATE_UI } from "./view.ts";
+import {
+  POSITION_HELP,
+  POSITION_SLOW_MS,
+  POSITION_WAIT_MS,
+  positionHelp,
+  withTimeout,
+} from "./position.ts";
+import { findTown, matches, normalize, type Town, townArea } from "./search.ts";
+import { announce, h, onPullDown, openSheet, reliabilityBadge, STATE_UI } from "./view.ts";
 
 const PROV = "AV";
 const REFRESH_MS = 90_000;
@@ -73,7 +80,7 @@ const ui = {
   /** Posizione dell'utente: solo in memoria, mai salvata né inviata. */
   origin: null as Point | null,
   limit: PAGE,
-  /** Comuni della provincia: caricati solo quando una ricerca non trova distributori. */
+  /** Comuni della provincia (1,5 KB): caricati alla prima ricerca. */
   towns: null as Town[] | null,
   townsLoading: false,
 };
@@ -142,11 +149,12 @@ async function loadTownsOnce(): Promise<void> {
 }
 
 /**
- * Comune cercato che non ha distributori: si mostrano i più vicini al suo centro, con il loro stato,
- * come se chi cerca fosse lì. Conta solo se nessun distributore corrisponde alla ricerca.
+ * Il comune indicato dalla ricerca ("grotta" → Grottaminarda), che abbia distributori o no: la lista
+ * mostra i suoi e quelli dei comuni vicini, con il loro stato, come se chi cerca fosse lì.
+ * Una ricerca che non è un comune (marchio, via) resta una ricerca nel testo.
  */
-function townWithoutStations(matched: readonly Station[]): Town | null {
-  if (matched.length > 0 || !normalize(ui.query)) return null;
+function searchedTown(): Town | null {
+  if (!normalize(ui.query)) return null;
   if (!ui.towns) {
     void loadTownsOnce();
     return null;
@@ -154,14 +162,15 @@ function townWithoutStations(matched: readonly Station[]): Town | null {
   return findTown(ui.towns, ui.query);
 }
 
-/** Attorno a un comune senza distributori: i comuni vicini, non un'area di servizio a 40 km. */
+/** Attorno al comune cercato: i comuni vicini, non un'area di servizio a 40 km. */
 const TOWN_RADIUS_KM = 15;
 const TOWN_MIN_RESULTS = 5;
 
 function sortedResults() {
-  const matched = ui.stations.filter((s) => matches(s.text, ui.query));
-  const town = townWithoutStations(matched);
-  const results = town ? nearby(ui.stations, town, TOWN_RADIUS_KM, TOWN_MIN_RESULTS) : matched;
+  const town = searchedTown();
+  const results = town
+    ? townArea(ui.stations, town, TOWN_RADIUS_KM, TOWN_MIN_RESULTS)
+    : ui.stations.filter((s) => matches(s.text, ui.query));
   const ref = town ?? referencePoint(results);
   const list = results
     .map((st) => ({ st, best: bestFuel(st), dist: ref ? distanceKm(ref, st) : null }))
@@ -275,8 +284,8 @@ function chips<T>(
 
 // ------------------------------------------------------------------ posizione
 
-function getPosition(highAccuracy: boolean): Promise<Point> {
-  return new Promise((resolve, reject) => {
+function getPosition(highAccuracy: boolean, maxAgeMs = highAccuracy ? 0 : 60_000): Promise<Point> {
+  const ask = new Promise<Point>((resolve, reject) => {
     if (!("geolocation" in navigator)) {
       reject(new Error("geolocalizzazione non disponibile"));
       return;
@@ -284,9 +293,10 @@ function getPosition(highAccuracy: boolean): Promise<Point> {
     navigator.geolocation.getCurrentPosition(
       (p) => resolve({ lat: p.coords.latitude, lon: p.coords.longitude }),
       reject,
-      { enableHighAccuracy: highAccuracy, timeout: 12_000, maximumAge: highAccuracy ? 0 : 60_000 },
+      { enableHighAccuracy: highAccuracy, timeout: 12_000, maximumAge: maxAgeMs },
     );
   });
+  return withTimeout(ask, POSITION_WAIT_MS);
 }
 
 // ------------------------------------------------------------------ vista lista
@@ -317,10 +327,27 @@ const posButton = h(
   { type: "button", class: "btn", onClick: () => void usePosition() },
   "📍 Usa la mia posizione",
 );
+/** Cosa fare quando la posizione non arriva (es. dentro Instagram): visibile, non solo letto. */
+const posHelp = h("p", { class: "note-box", hidden: true });
+/** Indicatore del "tira giù per aggiornare" (src/client/pull.ts). */
+const pullIndicator = h("div", { class: "ptr", "aria-hidden": "true" });
+/** Lo stesso aggiornamento con un tocco: per chi non usa il gesto (tastiera, lettori di schermo). */
+const refreshButton = h(
+  "button",
+  {
+    type: "button",
+    class: "icon-btn",
+    "aria-label": "Aggiorna la lista",
+    title: "Aggiorna la lista",
+    onClick: () => void refreshList(),
+  },
+  "↻",
+);
 
 const listView = h(
   "div",
   { class: "list" },
+  pullIndicator,
   h(
     "div",
     { class: "controls" },
@@ -338,6 +365,7 @@ const listView = h(
       },
     }),
     posButton,
+    posHelp,
     chips<FuelFilter>(
       [["all", "Tutti"], ...FUELS.map((f): [FuelFilter, string] => [f, FUEL_NAMES[f]])],
       (v) => {
@@ -348,21 +376,50 @@ const listView = h(
       ui.fuel,
     ),
   ),
-  summary,
+  h("div", { class: "summary-row" }, summary, refreshButton),
   invite,
   results,
   more,
 );
 
+/** Stato dei distributori e, se attiva, posizione appena letta: per chi si sposta con la lista aperta. */
+async function refreshList(): Promise<void> {
+  refreshButton.disabled = true;
+  const moved = ui.origin
+    ? getPosition(false, 5_000).then(
+        (p) => {
+          ui.origin = p;
+        },
+        () => {
+          // Posizione non riletta: resta l'ultima, la lista si aggiorna comunque.
+        },
+      )
+    : Promise.resolve();
+  await Promise.all([refresh(), moved]);
+  updateResults();
+  refreshButton.disabled = false;
+  announce("Lista aggiornata");
+}
+
 async function usePosition(): Promise<void> {
   posButton.textContent = "Cerco la posizione…";
+  posHelp.hidden = true;
+  const slow = setTimeout(() => {
+    posHelp.textContent = POSITION_HELP.slow;
+    posHelp.hidden = false;
+  }, POSITION_SLOW_MS);
   try {
     ui.origin = await getPosition(false);
+    posHelp.hidden = true;
     posButton.textContent = "📍 Ordinati per distanza da te";
     announce("Distributori ordinati per distanza");
-  } catch {
+  } catch (err) {
+    posHelp.textContent = positionHelp(err);
+    posHelp.hidden = false;
     posButton.textContent = "📍 Usa la mia posizione";
-    announce("Posizione non disponibile: cerca il tuo comune");
+    announce(posHelp.textContent);
+  } finally {
+    clearTimeout(slow);
   }
   updateResults();
 }
@@ -373,11 +430,15 @@ function updateResults(): void {
   const lastHour = ui.snap?.lastHour;
   const greenText = green > 0 ? ` · ${green} con carburante segnalato` : "";
   if (town) {
+    const own = all.filter((x) => normalize(x.st.town) === town.key).length;
+    const around = all.length - own;
     const far = all.some((x) => (x.dist ?? 0) > TOWN_RADIUS_KM);
+    const where = far ? "più vicini" : `entro ${TOWN_RADIUS_KM} km`;
+    const fuelText = ui.fuel === "all" ? "" : ` con ${FUEL_NAMES[ui.fuel]}`;
     summary.textContent =
-      `Nessun distributore a ${town.name}: ` +
-      (far ? `i ${all.length} più vicini` : `${all.length} entro ${TOWN_RADIUS_KM} km`) +
-      greenText;
+      (own > 0
+        ? `${own} a ${town.name}` + (around > 0 ? ` · ${around} ${where}` : "")
+        : `Nessun distributore${fuelText} a ${town.name} · ${all.length} ${where}`) + greenText;
   } else if (all.length === 0 && normalize(ui.query)) {
     summary.textContent = ui.townsLoading
       ? "Cerco i distributori più vicini…"
@@ -861,6 +922,7 @@ function render(): void {
   if (location.pathname === DATA_PATH) {
     setCanonical(null);
     app.replaceChildren(renderMyData());
+    document.documentElement.classList.remove("ptr-on");
     renderBanner();
     return;
   }
@@ -875,6 +937,8 @@ function render(): void {
     if (listView.parentElement !== app) app.replaceChildren(listView);
     updateResults();
   }
+  // Nella lista il "tira giù" aggiorna senza ricaricare: il ricaricamento del browser va spento.
+  document.documentElement.classList.toggle("ptr-on", listView.parentElement === app);
   renderBanner();
 }
 
@@ -921,6 +985,11 @@ async function init(): Promise<void> {
     return;
   }
   await refresh();
+  onPullDown({
+    indicator: pullIndicator,
+    enabled: () => listView.parentElement === app && !document.querySelector(".overlay"),
+    refresh: refreshList,
+  });
   window.addEventListener("popstate", render);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible") void refresh();
