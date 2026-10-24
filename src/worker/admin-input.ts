@@ -2,13 +2,18 @@
 // rifiutato. Nessun tipo Cloudflare: si testa in Node.
 
 import type { Parsed } from "../domain/input.ts";
+import { FUELS, type Fuel } from "../domain/types.ts";
 
 export const CONTEST_STATUSES = ["new", "in_progress", "closed"] as const;
 export type ContestStatus = (typeof CONTEST_STATUSES)[number];
 
 /** Il congelamento dura al massimo 3 ore (procedura contestazioni). */
 export const MAX_FREEZE_HOURS = 3;
+/** L'indicazione di QUI vale al massimo 8 ore, come le segnalazioni (termini, punto 6). */
+export const MAX_STATE_HOURS = 8;
 export const MAX_NOTE = 200;
+/** Segnalazioni annullabili in un colpo solo: tutte quelle di 8 ore su un impianto stanno sotto. */
+export const MAX_ANNUL = 200;
 
 export type AdminCommand =
   | { readonly kind: "ack"; readonly ids: readonly number[] }
@@ -20,7 +25,18 @@ export type AdminCommand =
       readonly hours: number;
     }
   | { readonly kind: "unfreeze"; readonly station: number }
-  | { readonly kind: "readOnly"; readonly on: boolean };
+  | { readonly kind: "readOnly"; readonly on: boolean }
+  | { readonly kind: "annul"; readonly ids: readonly number[]; readonly reason: string }
+  | {
+      readonly kind: "setState";
+      readonly station: number;
+      /** null: tutti i carburanti venduti dall'impianto. */
+      readonly fuel: Fuel | null;
+      readonly state: "green" | "red";
+      readonly note: string;
+      readonly hours: number;
+    }
+  | { readonly kind: "clearState"; readonly station: number };
 
 const KEYS: Record<AdminCommand["kind"], readonly string[]> = {
   ack: ["ids"],
@@ -28,11 +44,27 @@ const KEYS: Record<AdminCommand["kind"], readonly string[]> = {
   freeze: ["station", "note", "hours"],
   unfreeze: ["station"],
   readOnly: ["on"],
+  annul: ["ids", "reason"],
+  setState: ["station", "fuel", "state", "note", "hours"],
+  clearState: ["station"],
 };
 
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
 const isId = (v: unknown): v is number =>
   typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 9_999_999;
+
+/** Testo mostrato a tutti o salvato nel registro: niente caratteri di controllo, lunghezza limitata. */
+function cleanNote(v: unknown): string | null {
+  const note =
+    typeof v === "string"
+      ? // biome-ignore lint/suspicious/noControlCharactersInRegex: è proprio ciò che vogliamo rimuovere
+        v.replace(/[\u0000-\u001f\u007f]/g, " ").trim()
+      : "";
+  return note.length < 3 || note.length > MAX_NOTE ? null : note;
+}
+
+const isHours = (v: unknown, max: number): v is number =>
+  typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= max;
 
 export function parseAdminAction(
   body: unknown,

@@ -83,11 +83,32 @@ describe("describeState", () => {
     }
   });
 
+  it("indicazione di QUI: attribuita a QUI, mai agli utenti, con l'età", () => {
+    const green = describeState(
+      result({ state: State.GREEN, flags: Flag.OFFICIAL, lastConfirmMs: min(20) }),
+      NOW,
+    );
+    expect(green).toEqual({
+      title: "Disponibile secondo QUI",
+      detail: "indicazione di QUI 20 min fa",
+      operatorLink: false,
+    });
+    const red = describeState(
+      result({ state: State.RED, flags: Flag.OFFICIAL, lastConfirmMs: min(3) }),
+      NOW,
+    );
+    expect(red.title).toBe("Segnalato esaurito da QUI");
+    expect(red.operatorLink).toBe(true);
+    expect(`${green.title} ${red.title}`).not.toMatch(/utenti/);
+  });
+
   it("nessun testo afferma come fatto che un distributore 'è esaurito' o 'non ha carburante'", () => {
     const all: StateResult[] = [
       result({ state: State.GREY }),
       result({ state: State.RED, absences: 3, lastAbsenceMs: min(1) }),
       result({ state: State.GREEN, confirmations: 3, lastConfirmMs: min(1) }),
+      result({ state: State.GREEN, flags: Flag.OFFICIAL, lastConfirmMs: min(5) }),
+      result({ state: State.RED, flags: Flag.OFFICIAL, lastConfirmMs: min(5) }),
       ...[Flag.NONE, Flag.RED_PENDING, Flag.RED_EXPIRED, Flag.CONTESTED, Flag.SINGLE_ABSENCE].map(
         (flags) =>
           result({
