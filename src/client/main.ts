@@ -30,6 +30,13 @@ import {
   storedData,
 } from "./local.ts";
 import { directionsUrl, MAPS_APPS, type MapsApp, parseStationPath, stationPath } from "./nav.ts";
+import {
+  POSITION_HELP,
+  POSITION_SLOW_MS,
+  POSITION_WAIT_MS,
+  positionHelp,
+  withTimeout,
+} from "./position.ts";
 import { findTown, matches, normalize, type Town } from "./search.ts";
 import { announce, h, openSheet, reliabilityBadge, STATE_UI } from "./view.ts";
 
@@ -276,7 +283,7 @@ function chips<T>(
 // ------------------------------------------------------------------ posizione
 
 function getPosition(highAccuracy: boolean): Promise<Point> {
-  return new Promise((resolve, reject) => {
+  const ask = new Promise<Point>((resolve, reject) => {
     if (!("geolocation" in navigator)) {
       reject(new Error("geolocalizzazione non disponibile"));
       return;
@@ -287,6 +294,7 @@ function getPosition(highAccuracy: boolean): Promise<Point> {
       { enableHighAccuracy: highAccuracy, timeout: 12_000, maximumAge: highAccuracy ? 0 : 60_000 },
     );
   });
+  return withTimeout(ask, POSITION_WAIT_MS);
 }
 
 // ------------------------------------------------------------------ vista lista
@@ -317,6 +325,8 @@ const posButton = h(
   { type: "button", class: "btn", onClick: () => void usePosition() },
   "📍 Usa la mia posizione",
 );
+/** Cosa fare quando la posizione non arriva (es. dentro Instagram): visibile, non solo letto. */
+const posHelp = h("p", { class: "note-box", hidden: true });
 
 const listView = h(
   "div",
@@ -338,6 +348,7 @@ const listView = h(
       },
     }),
     posButton,
+    posHelp,
     chips<FuelFilter>(
       [["all", "Tutti"], ...FUELS.map((f): [FuelFilter, string] => [f, FUEL_NAMES[f]])],
       (v) => {
@@ -356,13 +367,23 @@ const listView = h(
 
 async function usePosition(): Promise<void> {
   posButton.textContent = "Cerco la posizione…";
+  posHelp.hidden = true;
+  const slow = setTimeout(() => {
+    posHelp.textContent = POSITION_HELP.slow;
+    posHelp.hidden = false;
+  }, POSITION_SLOW_MS);
   try {
     ui.origin = await getPosition(false);
+    posHelp.hidden = true;
     posButton.textContent = "📍 Ordinati per distanza da te";
     announce("Distributori ordinati per distanza");
-  } catch {
+  } catch (err) {
+    posHelp.textContent = positionHelp(err);
+    posHelp.hidden = false;
     posButton.textContent = "📍 Usa la mia posizione";
-    announce("Posizione non disponibile: cerca il tuo comune");
+    announce(posHelp.textContent);
+  } finally {
+    clearTimeout(slow);
   }
   updateResults();
 }

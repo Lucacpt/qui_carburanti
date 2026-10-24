@@ -128,3 +128,41 @@ describe("anagrafica nel client", () => {
     expect(fuelsFromMask(FUEL_BIT.H)).toEqual(["H"]);
   });
 });
+
+import { vi } from "vitest";
+import { POSITION_HELP, PositionTimeout, positionHelp, withTimeout } from "./position.ts";
+
+describe("posizione che non arriva (es. browser interno di Instagram)", () => {
+  it("withTimeout smette di aspettare una richiesta senza risposta", async () => {
+    vi.useFakeTimers();
+    try {
+      const never = withTimeout(new Promise<never>(() => {}), 20_000);
+      const check = expect(never).rejects.toBeInstanceOf(PositionTimeout);
+      await vi.advanceTimersByTimeAsync(20_000);
+      await check;
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("withTimeout lascia passare risultati ed errori arrivati in tempo", async () => {
+    await expect(withTimeout(Promise.resolve(7), 1_000)).resolves.toBe(7);
+    await expect(withTimeout(Promise.reject({ code: 1 }), 1_000)).rejects.toEqual({ code: 1 });
+  });
+
+  it("permesso negato, API assente o nessuna risposta: suggerisce di aprire nel browser", () => {
+    for (const err of [
+      { code: 1 },
+      new Error("geolocalizzazione non disponibile"),
+      new PositionTimeout(),
+    ]) {
+      expect(positionHelp(err)).toBe(POSITION_HELP.blocked);
+    }
+    expect(POSITION_HELP.blocked).toContain("Apri nel browser");
+  });
+
+  it("posizione non trovata o scaduta: suggerisce il comune", () => {
+    expect(positionHelp({ code: 2 })).toBe(POSITION_HELP.unavailable);
+    expect(positionHelp({ code: 3 })).toBe(POSITION_HELP.unavailable);
+  });
+});
