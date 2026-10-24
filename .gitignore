@@ -18,3 +18,6 @@ Thumbs.db
 docs/private/
 # dati MIMIT scaricati: si rigenerano con lo script di import
 data/raw/
+# materiale social del maintainer (post, grafiche e lo script che li genera): fuori dal repository
+assets/
+scripts/generate_social_post.js
