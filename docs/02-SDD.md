@@ -139,7 +139,7 @@ IP in chiaro · coordinate dell'utente · user-agent · fingerprint · referrer 
 
 ### 6.1 Identità anonima di segnalazione
 ```
-prefisso   = IPv4 ? ip/32 : ip/64                  (da CF-Connecting-IP, solo in memoria)
+prefisso   = IPv4 ? ip/32 : ip/56                  (da CF-Connecting-IP, solo in memoria)
 token      = 128 bit casuali generati dal client, in localStorage, ruotati a mezzanotte locale
 K_giorno   = 32 byte casuali da KeyDO (ruotati 00:00 UTC; la chiave precedente viene SOVRASCRITTA)
 rkey       = trunc16(HMAC-SHA256(K_giorno, "r" ‖ prefisso ‖ token))

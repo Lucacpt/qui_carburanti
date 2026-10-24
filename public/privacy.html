@@ -21,7 +21,7 @@
   </header>
   <main class="page legal">
     <h2>Informativa privacy</h2>
-    <p class="muted small">Versione 1 · aggiornata il 23 ottobre 2026 · <a
+    <p class="muted small">Versione 1 · aggiornata il 24 ottobre 2026 · <a
         href="https://github.com/Lucacpt/qui_carburanti/commits/main/public/privacy.html">tutte le modifiche</a></p>
 
 
@@ -96,7 +96,7 @@
       arrivano dalla stessa persona o dalla stessa rete, senza sapere chi sei. Appena la segnalazione arriva, il server:
     </p>
     <ol>
-      <li>prende l'indirizzo IP (per IPv6 solo la parte che indica la rete, /64) e il codice casuale del giorno salvato
+      <li>prende l'indirizzo IP (per IPv6 solo la parte iniziale, /56, che indica la rete di casa o dell'operatore) e il codice casuale del giorno salvato
         sul tuo telefono (vedi <a href="/cookie">Cookie</a>);</li>
       <li>li trasforma, con una chiave segreta del giorno, in due codici illeggibili (HMAC-SHA-256): uno per
         "dispositivo e rete", uno solo per "rete";</li>

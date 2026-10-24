@@ -30,7 +30,7 @@ I tempi di conservazione citati qui e nell'informativa coincidono con le costant
 - **Finalità:** calcolare lo stato dei distributori; impedire che una sola persona o rete determini lo stato.
 - **Base giuridica:** legittimo interesse (art. 6.1.f), vedi §3.
 - **Interessati:** chi invia una segnalazione.
-- **Dati:** impianto, carburante, presenza o assenza, "sul posto" (booleano calcolato sul dispositivo), coda e limite facoltativi, ora; `rkey` = HMAC-SHA-256(chiave del giorno, prefisso IP ‖ token) e `pkey` = HMAC-SHA-256(chiave del giorno, prefisso IP), troncati a 128 bit. Prefisso: IPv4 intero, IPv6 /64. **L'IP non viene memorizzato.**
+- **Dati:** impianto, carburante, presenza o assenza, "sul posto" (booleano calcolato sul dispositivo), coda e limite facoltativi, ora; `rkey` = HMAC-SHA-256(chiave del giorno, prefisso IP ‖ token) e `pkey` = HMAC-SHA-256(chiave del giorno, prefisso IP), troncati a 128 bit. Prefisso: IPv4 intero, IPv6 /56. **L'IP non viene memorizzato.**
 - **Destinatari:** Cloudflare (Durable Objects, giurisdizione UE).
 - **Conservazione:** 8 ore (`DEFAULT_PARAMS.windowMs`), poi cancellazione automatica. La chiave del giorno viene cancellata a mezzanotte UTC. Le copie tecniche di Cloudflare (point-in-time recovery) restano fino a 30 giorni.
 - **Note:** dati pseudonimizzati, quindi personali (cons. 26). Il token è casuale (128 bit), nasce sul dispositivo solo alla prima segnalazione del giorno e non è ricostruibile dal server.

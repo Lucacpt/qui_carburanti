@@ -1,11 +1,15 @@
-// Prefisso di rete usato per le chiavi anonime (SDD §6.1): IPv4 intero, IPv6 /64.
+// Prefisso di rete usato per le chiavi anonime (SDD §6.1): IPv4 intero, IPv6 /56.
+// /56 e non /64: a una casa con la fibra di solito viene assegnato un /56, cioè 256 reti /64; con il
+// /64 una sola persona poteva sembrare 256 reti e aggirare il tetto per rete (revisione 2026-10-24).
 // L'IP non esce mai da questa funzione e dall'HMAC che segue: non viene salvato né loggato.
 
 export function ipPrefix(ip: string): string | null {
   const v4 = parseV4(ip.startsWith("::ffff:") ? ip.slice(7) : ip);
   if (v4 !== null) return v4;
   const groups = expandV6(ip);
-  return groups === null ? null : `${groups.slice(0, 4).join(":")}::/64`;
+  if (groups === null) return null;
+  const [a, b, c, d = "0000"] = groups;
+  return `${a}:${b}:${c}:${d.slice(0, 2)}00::/56`;
 }
 
 function parseV4(ip: string): string | null {
