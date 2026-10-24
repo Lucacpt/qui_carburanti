@@ -165,7 +165,7 @@ function searchedTown(): Town | null {
 }
 
 /** Attorno al comune cercato: i comuni vicini, non un'area di servizio a 40 km. */
-const TOWN_RADIUS_KM = 15;
+const TOWN_RADIUS_KM = 7;
 const TOWN_MIN_RESULTS = 5;
 
 function sortedResults() {
