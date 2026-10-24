@@ -9,11 +9,12 @@ import {
   FUEL_NAMES,
   loadSnapshot,
   loadStations,
+  loadTowns,
   rowKey,
   type SnapshotData,
   type Station,
 } from "./data.ts";
-import { centroid, distanceKm, formatDistance, NEAR_KM, type Point } from "./geo.ts";
+import { centroid, distanceKm, formatDistance, NEAR_KM, nearby, type Point } from "./geo.ts";
 import {
   clearStoredData,
   currentToken,
@@ -29,7 +30,7 @@ import {
   storedData,
 } from "./local.ts";
 import { directionsUrl, MAPS_APPS, type MapsApp, parseStationPath, stationPath } from "./nav.ts";
-import { matches, normalize } from "./search.ts";
+import { findTown, matches, normalize, type Town } from "./search.ts";
 import { announce, h, openSheet, reliabilityBadge, STATE_UI } from "./view.ts";
 
 const PROV = "AV";
@@ -72,6 +73,9 @@ const ui = {
   /** Posizione dell'utente: solo in memoria, mai salvata né inviata. */
   origin: null as Point | null,
   limit: PAGE,
+  /** Comuni della provincia: caricati solo quando una ricerca non trova distributori. */
+  towns: null as Town[] | null,
+  townsLoading: false,
 };
 
 const app = document.getElementById("app") as HTMLElement;
@@ -124,10 +128,42 @@ function referencePoint(results: readonly Station[]): Point | null {
   return centroid(town.length > 0 ? town : []);
 }
 
+async function loadTownsOnce(): Promise<void> {
+  if (ui.towns || ui.townsLoading) return;
+  ui.townsLoading = true;
+  try {
+    ui.towns = await loadTowns(PROV);
+  } catch {
+    // Offline: resta la lista vuota di prima; al prossimo tasto si riprova.
+  } finally {
+    ui.townsLoading = false;
+    updateResults();
+  }
+}
+
+/**
+ * Comune cercato che non ha distributori: si mostrano i più vicini al suo centro, con il loro stato,
+ * come se chi cerca fosse lì. Conta solo se nessun distributore corrisponde alla ricerca.
+ */
+function townWithoutStations(matched: readonly Station[]): Town | null {
+  if (matched.length > 0 || !normalize(ui.query)) return null;
+  if (!ui.towns) {
+    void loadTownsOnce();
+    return null;
+  }
+  return findTown(ui.towns, ui.query);
+}
+
+/** Attorno a un comune senza distributori: i comuni vicini, non un'area di servizio a 40 km. */
+const TOWN_RADIUS_KM = 15;
+const TOWN_MIN_RESULTS = 5;
+
 function sortedResults() {
-  const results = ui.stations.filter((s) => matches(s.text, ui.query));
-  const ref = referencePoint(results);
-  return results
+  const matched = ui.stations.filter((s) => matches(s.text, ui.query));
+  const town = townWithoutStations(matched);
+  const results = town ? nearby(ui.stations, town, TOWN_RADIUS_KM, TOWN_MIN_RESULTS) : matched;
+  const ref = town ?? referencePoint(results);
+  const list = results
     .map((st) => ({ st, best: bestFuel(st), dist: ref ? distanceKm(ref, st) : null }))
     .filter(
       (x): x is { st: Station; best: NonNullable<typeof x.best>; dist: number | null } => !!x.best,
@@ -139,6 +175,7 @@ function sortedResults() {
         b.best.status.reliability - a.best.status.reliability ||
         a.st.name.localeCompare(b.st.name),
     );
+  return { town, list };
 }
 
 // ------------------------------------------------------------------ componenti
@@ -331,16 +368,29 @@ async function usePosition(): Promise<void> {
 }
 
 function updateResults(): void {
-  const all = sortedResults();
+  const { town, list: all } = sortedResults();
   const green = all.filter((x) => x.best.status.result.state === State.GREEN).length;
   const lastHour = ui.snap?.lastHour;
-  summary.textContent =
-    `${all.length} distributori` +
-    (green > 0 ? ` · ${green} con carburante segnalato` : "") +
-    (lastHour === undefined
-      ? ""
-      : ` · ${lastHour === 1 ? "1 segnalazione" : `${lastHour} segnalazioni`} nell'ultima ora in provincia`) +
-    (ui.origin || ui.query ? "" : " · cerca il tuo comune o usa la posizione");
+  const greenText = green > 0 ? ` · ${green} con carburante segnalato` : "";
+  if (town) {
+    const far = all.some((x) => (x.dist ?? 0) > TOWN_RADIUS_KM);
+    summary.textContent =
+      `Nessun distributore a ${town.name}: ` +
+      (far ? `i ${all.length} più vicini` : `${all.length} entro ${TOWN_RADIUS_KM} km`) +
+      greenText;
+  } else if (all.length === 0 && normalize(ui.query)) {
+    summary.textContent = ui.townsLoading
+      ? "Cerco i distributori più vicini…"
+      : "Nessun risultato in provincia di Avellino. Prova con il nome del comune.";
+  } else {
+    summary.textContent =
+      `${all.length} distributori` +
+      greenText +
+      (lastHour === undefined
+        ? ""
+        : ` · ${lastHour === 1 ? "1 segnalazione" : `${lastHour} segnalazioni`} nell'ultima ora in provincia`) +
+      (ui.origin || ui.query ? "" : " · cerca il tuo comune o usa la posizione");
+  }
   invite.hidden = !ui.snap || green > 0 || all.length === 0;
   results.replaceChildren(
     ...all.slice(0, ui.limit).map(({ st, best, dist }) => card(st, best, dist)),

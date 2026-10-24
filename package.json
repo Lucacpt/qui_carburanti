@@ -20,7 +20,8 @@
     "budget": "node scripts/check-budget.ts",
     "privacy-guard": "node scripts/privacy-guard.ts",
     "legal-check": "node scripts/check-legal.ts",
-    "import:mimit": "node scripts/import-mimit.ts AV"
+    "import:mimit": "node scripts/import-mimit.ts AV",
+    "import:comuni": "node scripts/import-comuni.ts AV"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",

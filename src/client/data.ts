@@ -3,9 +3,10 @@
 import type { ProvinceRegistry } from "../domain/mimit.ts";
 import { FUEL_BIT } from "../domain/mimit.ts";
 import type { LastGreenRow, SnapshotRow } from "../domain/snapshot.ts";
+import type { TownsFile } from "../domain/towns.ts";
 import { FUELS, type Fuel } from "../domain/types.ts";
 import type { Point } from "./geo.ts";
-import { normalize } from "./search.ts";
+import { normalize, type Town } from "./search.ts";
 
 export const FUEL_NAMES: Readonly<Record<Fuel, string>> = {
   B: "Benzina",
@@ -68,6 +69,25 @@ export async function loadStations(prov: string): Promise<Station[]> {
   const file = manifest.files[prov];
   if (!file) throw new Error(`anagrafica assente per ${prov}`);
   return stationsFromRegistry((await (await fetch(`/r/${file}`)).json()) as ProvinceRegistry);
+}
+
+/**
+ * Comuni della provincia, scaricati solo quando una ricerca non trova distributori: la prima visita
+ * non li carica. Restano in cache come l'anagrafica (nome con hash).
+ */
+export async function loadTowns(prov: string): Promise<Town[]> {
+  const manifest = (await (await fetch("/r/manifest.json", { cache: "no-cache" })).json()) as {
+    comuni?: Record<string, string>;
+  };
+  const file = manifest.comuni?.[prov];
+  if (!file) return [];
+  const data = (await (await fetch(`/r/${file}`)).json()) as TownsFile;
+  return data.co.map(([name, latE5, lonE5]) => ({
+    name,
+    lat: latE5 / 1e5,
+    lon: lonE5 / 1e5,
+    key: normalize(name),
+  }));
 }
 
 export async function loadSnapshot(prov: string): Promise<SnapshotData> {
