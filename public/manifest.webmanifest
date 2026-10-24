@@ -1,0 +1,19 @@
+{
+  "name": "QUI — dove c'è carburante, adesso",
+  "short_name": "QUI",
+  "description": "Dove c'è carburante adesso in provincia di Avellino, dalle segnalazioni degli automobilisti.",
+  "lang": "it",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#EA580C",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

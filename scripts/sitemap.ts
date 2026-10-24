@@ -26,12 +26,19 @@ function url(loc: string, lastmod?: string): string {
   return `  <url><loc>${escapeXml(`${ORIGIN}${loc}`)}</loc>${mod}</url>`;
 }
 
-export function buildSitemap(stations: readonly SitemapStation[]): string {
+/** `towns`: gli slug delle pagine dei comuni con impianti (fase 1), più l'indice /comuni. */
+export function buildSitemap(
+  stations: readonly SitemapStation[],
+  towns: ReadonlyArray<{ readonly slug: string; readonly lastmod: string }> = [],
+): string {
   const ids = [...stations].sort((a, b) => a.id - b.id);
+  const slugs = [...towns].sort((a, b) => a.slug.localeCompare(b.slug));
   return [
     '<?xml version="1.0" encoding="UTF-8"?>',
     '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">',
     ...PAGES.map((p) => url(p)),
+    ...(slugs.length > 0 ? [url("/comuni", slugs[0]?.lastmod)] : []),
+    ...slugs.map((t) => url(`/comune/${t.slug}`, t.lastmod)),
     ...ids.map((s) => url(`/d/${s.id}`, s.lastmod)),
     "</urlset>",
     "",

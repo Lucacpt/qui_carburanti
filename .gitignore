@@ -6,6 +6,9 @@ public/admin.js
 # generati da scripts/build-seo.ts
 public/sitemap.xml
 public/llms-full.txt
+public/comuni.html
+public/d/
+public/comune/
 dist/
 coverage/
 .wrangler/

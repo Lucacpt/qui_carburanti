@@ -54,9 +54,10 @@ a {
   padding: 10px 16px;
   border-bottom: 3px solid var(--brand);
 }
-.top h1 {
+.top .brand-name {
   margin: 0;
   font-size: 1.5rem;
+  font-weight: 700;
   letter-spacing: 0.05em;
 }
 .home {
@@ -384,7 +385,7 @@ html.ptr-on {
 }
 
 /* --- dettaglio --- */
-.detail h2 {
+.detail h1 {
   margin: 4px 0;
 }
 .fuel {
