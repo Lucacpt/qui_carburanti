@@ -1,0 +1,208 @@
+/* Pagina d'attesa (presto.html): tutta arancione, testo bianco.
+   --orange è il fondo di ogni testo: bianco 5,2:1 (AA). L'arancione del logo (#ea580c) col bianco fa
+   solo 3,6:1, quindi resta un alone decorativo dietro il logo e il titolo, che è testo grande.
+   scripts/presto.test.ts verifica i contrasti di questi valori. */
+:root {
+  --orange: #c2410c;
+  --glow: #ea580c;
+  --card: #a93a0e;
+  --deep: #7c2d12;
+  --white: #ffffff;
+  color-scheme: light;
+}
+* {
+  box-sizing: border-box;
+}
+html {
+  background: var(--orange);
+}
+body {
+  margin: 0;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  font:
+    17px / 1.5 system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  color: var(--white);
+  background:
+    radial-gradient(36rem 26rem at 50% -4rem, var(--glow), transparent 70%), var(--orange);
+  overflow-x: hidden;
+}
+a {
+  color: var(--white);
+}
+a:focus-visible {
+  outline: 3px solid var(--white);
+  outline-offset: 3px;
+}
+
+/* La X del logo, enorme e quasi trasparente, nello spazio vuoto accanto al testo: su schermi
+   stretti finirebbe sotto le schede, quindi lì non c'è. */
+.bg-x {
+  display: none;
+  position: fixed;
+  right: -6rem;
+  bottom: -6rem;
+  width: 26rem;
+  height: 26rem;
+  opacity: 0.08;
+  pointer-events: none;
+}
+@media (min-width: 60rem) {
+  .bg-x {
+    display: block;
+  }
+}
+
+.hero {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding: 40px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+.logo {
+  display: block;
+  border-radius: 24px;
+  box-shadow:
+    0 0 0 4px var(--white),
+    0 12px 32px rgb(124 45 18 / 0.45);
+}
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 28px 0 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--deep);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.badge::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--glow);
+  animation: pulse 1.6s ease-in-out infinite;
+}
+h1 {
+  margin: 18px 0 0;
+  font-size: clamp(2.4rem, 11vw, 3.75rem);
+  line-height: 1.02;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+.lead {
+  margin: 18px 0 0;
+  font-size: 1.12rem;
+  text-wrap: pretty;
+}
+
+.points {
+  list-style: none;
+  margin: 28px 0 0;
+  padding: 0;
+  width: 100%;
+  display: grid;
+  gap: 10px;
+  text-align: left;
+}
+.points li {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--card);
+}
+.points svg {
+  flex: none;
+  width: 28px;
+  height: 28px;
+  margin-top: 2px;
+}
+.points strong {
+  display: block;
+  font-size: 1.05rem;
+}
+
+.save {
+  margin: 28px 0 0;
+  width: 100%;
+  padding: 18px 20px;
+  border-radius: 20px;
+  background: var(--white);
+  color: var(--deep);
+  font-size: 1.05rem;
+}
+.save .domain {
+  display: block;
+  margin: 2px 0 4px;
+  color: var(--orange);
+  font-size: clamp(1.6rem, 7.5vw, 2rem);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.foot {
+  padding: 8px 20px 28px;
+  text-align: center;
+  font-size: 0.95rem;
+}
+.foot p {
+  margin: 6px 0 0;
+}
+
+/* Entrata morbida, dall'alto verso il basso. */
+.hero > * {
+  animation: rise 0.6s ease-out both;
+}
+.hero > :nth-child(2) {
+  animation-delay: 0.08s;
+}
+.hero > :nth-child(3) {
+  animation-delay: 0.16s;
+}
+.hero > :nth-child(4) {
+  animation-delay: 0.24s;
+}
+.hero > :nth-child(5) {
+  animation-delay: 0.32s;
+}
+.hero > :nth-child(6) {
+  animation-delay: 0.4s;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+}
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+    transform: scale(0.7);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero > *,
+  .badge::before {
+    animation: none;
+  }
+}

@@ -7,25 +7,37 @@
   <meta name="description" content="QUI mostra quali distributori della provincia di Avellino hanno carburante adesso, grazie alle segnalazioni di chi c'è appena stato. Online a brevissimo.">
   <!-- Pagina d'attesa: la pubblica scripts/deploy.ts in produzione finché PUBLIC_LAUNCH non vale 1. -->
   <meta name="robots" content="noindex">
-  <meta name="theme-color" content="#EA580C">
+  <meta name="theme-color" content="#C2410C">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/app.css">
+  <link rel="stylesheet" href="/presto.css">
 </head>
 <body>
-  <header class="top">
-    <a href="/" class="home"><img src="/icon.svg" width="40" height="40" alt=""><h1>QUI</h1></a>
-  </header>
-  <main class="page">
-    <h2>Arriviamo a brevissimo</h2>
-    <p><strong>Dove c'è carburante, adesso.</strong> Le segnalazioni di chi c'è appena stato, distributore per distributore, in provincia di Avellino.</p>
-    <ul>
-      <li>Gratis, senza account e senza pubblicità.</li>
-      <li>La tua posizione resta sul telefono.</li>
-      <li>Nessuna app da scaricare: basta questo indirizzo.</li>
+  <svg class="bg-x" viewBox="0 0 100 100" aria-hidden="true" focusable="false">
+    <path d="M18 18L82 82M82 18L18 82" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+  </svg>
+  <main class="hero">
+    <img class="logo" src="/icon.svg" width="88" height="88" alt="QUI">
+    <p class="badge">Arriviamo a brevissimo</p>
+    <h1>Basta girare a vuoto.</h1>
+    <p class="lead">Sappiamo cosa vuol dire: la spia accesa, un distributore dopo l'altro e ogni volta lo stesso cartello. QUI ti dice <strong>dove c'è carburante adesso</strong>, grazie a chi ci è appena passato.</p>
+    <ul class="points">
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 20s-7.5-4.6-7.5-10.2A4.3 4.3 0 0 1 12 7a4.3 4.3 0 0 1 7.5 2.8C19.5 15.4 12 20 12 20z"/></svg>
+        <span><strong>Ci aiutiamo a vicenda</strong>Una segnalazione di pochi secondi risparmia chilometri a chi viene dopo di te.</span>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="8.5"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></svg>
+        <span><strong>Gratis e senza account</strong>Niente registrazioni, niente pubblicità, nessuna app da scaricare.</span>
+      </li>
+      <li>
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M12 3l7 3v5.5c0 4.3-3 7.9-7 9.5-4-1.6-7-5.2-7-9.5V6z"/><path d="M9.5 12l1.8 1.8 3.4-3.6"/></svg>
+        <span><strong>La tua posizione resta tua</strong>Non lascia mai il telefono. Non sappiamo chi sei, ed è giusto così.</span>
+      </li>
     </ul>
-    <p class="note-box">Salva <strong>quicarburanti.it</strong> e torna tra poco.</p>
+    <p class="save">Salva l'indirizzo e torna tra poco: <span class="domain">quicarburanti.it</span>Intanto passa parola: più siamo, più QUI è utile.</p>
   </main>
   <footer class="foot">
+    <p>Pensato per chi vive e si muove in Irpinia.</p>
     <p><a href="/come-funziona">Come funziona</a> · <a href="/progetto">Il progetto</a> · <a href="/privacy">Privacy</a></p>
   </footer>
 </body>
