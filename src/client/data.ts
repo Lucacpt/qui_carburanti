@@ -97,7 +97,9 @@ export async function loadTowns(prov: string): Promise<Town[]> {
 }
 
 export async function loadSnapshot(prov: string): Promise<SnapshotData> {
-  const res = await fetch(`/api/s/${prov}`);
+  // "no-cache": sempre una domanda al server (con ETag ⇒ 304 se non è cambiato niente). Senza,
+  // il browser riusava per ore una copia vecchia (produzione, 2026-10-24: PWA e Instagram).
+  const res = await fetch(`/api/s/${prov}`, { cache: "no-cache" });
   if (!res.ok) throw new Error(`snapshot ${res.status}`);
   const body = (await res.json()) as {
     t: number;

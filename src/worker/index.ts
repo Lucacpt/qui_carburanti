@@ -5,7 +5,16 @@ import { parseContest, parseReport } from "../domain/input.ts";
 import { handleAdmin } from "./admin.ts";
 import type { Env } from "./env.ts";
 import { withSecurityHeaders } from "./headers.ts";
-import { etagMatches, GENERIC_ERROR, HttpError, json, notFound, readJson } from "./http.ts";
+import {
+  etagMatches,
+  forBrowser,
+  GENERIC_ERROR,
+  HttpError,
+  json,
+  notFound,
+  readJson,
+  SNAPSHOT_EDGE_CACHE,
+} from "./http.ts";
 import { anonymousKeys, networkKey } from "./identity.ts";
 import { located } from "./jurisdiction.ts";
 import { createChallenge, requireSecret, verifyPow } from "./pow.ts";
@@ -14,6 +23,7 @@ export { KeyDO } from "./do/keys.ts";
 export { ProvinceDO } from "./do/province.ts";
 
 const SNAPSHOT_RE = /^\/api\/s\/([A-Z]{2})$/;
+const snapshotCacheKey = (origin: string, prov: string) => new Request(`${origin}/api/s/${prov}`);
 
 const provinces = (env: Env) =>
   env.PROVINCES.split(",")
@@ -81,6 +91,8 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
     if (status === "read_only") {
       return json({ ok: false, error: "Segnalazioni sospese temporaneamente" }, 503);
     }
+    // Chi ha appena segnalato rilegge la lista dallo stesso data center: niente copia vecchia.
+    ctx.waitUntil(caches.default.delete(snapshotCacheKey(url.origin, r.prov)));
     return json({ ok: true }, 202);
   }
 
@@ -113,7 +125,7 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
     const prov = snap[1];
     if (!provinces(env).includes(prov)) throw new HttpError(404, "provincia non attiva");
     const cache = caches.default;
-    const cacheKey = new Request(`${url.origin}/api/s/${prov}`);
+    const cacheKey = snapshotCacheKey(url.origin, prov);
     let res = await cache.match(cacheKey);
     if (!res) {
       const { body, etag } = await province(env, prov).snapshot(prov);
@@ -121,7 +133,7 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
         new Response(body, {
           headers: {
             "Content-Type": "application/json; charset=utf-8",
-            "Cache-Control": "public, max-age=30, stale-while-revalidate=60",
+            "Cache-Control": SNAPSHOT_EDGE_CACHE,
             ETag: etag,
           },
         }),
@@ -129,9 +141,9 @@ async function handle(request: Request, env: Env, ctx: ExecutionContext): Promis
       ctx.waitUntil(cache.put(cacheKey, res.clone()));
     }
     if (etagMatches(request.headers.get("If-None-Match"), res.headers.get("ETag"))) {
-      return withSecurityHeaders(new Response(null, { status: 304, headers: res.headers }));
+      return forBrowser(res, 304);
     }
-    return res;
+    return forBrowser(res);
   }
 
   throw new HttpError(404, "non trovato");
