@@ -173,10 +173,15 @@ const TOWN_MIN_RESULTS = 5;
 /** Quanti distributori con segnalazioni aggiungere quando i dintorni sono tutti grigi. */
 const EXPAND_RESULTS = 10;
 
-/** C'è almeno uno stato (verde, ambra o rosso) per i carburanti scelti. */
+/** Indicato come chiuso da QUI: in fondo alla lista, con la nota nella scheda. */
+function isClosed(id: number): boolean {
+  return ui.snap?.closed.has(id) ?? false;
+}
+
+/** C'è almeno uno stato (verde, ambra o rosso) per i carburanti scelti, e l'impianto è aperto. */
 function hasInfo(st: Station): boolean {
   const best = bestFuel(st);
-  return !!best && best.status.result.state !== State.GREY;
+  return !isClosed(st.id) && !!best && best.status.result.state !== State.GREY;
 }
 
 function sortedResults() {
@@ -194,6 +199,7 @@ function sortedResults() {
     )
     .sort(
       (a, b) =>
+        Number(isClosed(a.st.id)) - Number(isClosed(b.st.id)) ||
         STATE_UI[a.best.status.result.state].rank - STATE_UI[b.best.status.result.state].rank ||
         (a.dist ?? 0) - (b.dist ?? 0) ||
         b.best.status.reliability - a.best.status.reliability ||
@@ -264,8 +270,10 @@ function card(st: Station, best: { fuel: Fuel; status: FuelStatus }, dist: numbe
         dist !== null ? h("span", { class: "dist" }, formatDistance(dist)) : null,
       ),
       h("div", { class: "addr" }, `${st.address}, ${st.town}`),
-      statusLine(best.fuel, best.status),
-      ui.fuel === "all" && st.fuels.length > 1 ? fuelBadges(st) : null,
+      isClosed(st.id)
+        ? h("div", { class: "status s-red" }, h("strong", {}, "✕ Chiuso secondo QUI"))
+        : statusLine(best.fuel, best.status),
+      ui.fuel === "all" && st.fuels.length > 1 && !isClosed(st.id) ? fuelBadges(st) : null,
     ),
   );
 }
@@ -580,6 +588,7 @@ function renderDetail(id: number): HTMLElement {
   preparePow(PROV);
   const statuses = st.fuels.map((fuel) => ({ fuel, status: statusOf(st.id, fuel) }));
   const note = ui.snap?.frozen.get(st.id);
+  const closedNote = ui.snap?.closed.get(st.id);
   const operator = statuses.some((s) => describeState(s.status.result, now()).operatorLink);
   const readOnly = ui.snap?.readOnly ?? false;
 
@@ -593,6 +602,7 @@ function renderDetail(id: number): HTMLElement {
       ? h("p", { class: "muted" }, `A ${formatDistance(distanceKm(ui.origin, st))} da te`)
       : null,
     note ? h("p", { class: "note-box" }, `ℹ ${note}`) : null,
+    closedNote ? h("p", { class: "note-box" }, `⚠ Chiuso secondo QUI: ${closedNote}`) : null,
     ...statuses.map(({ fuel, status }) =>
       h(
         "section",
@@ -1019,7 +1029,9 @@ function renderBanner(): void {
     ? "Segnalazioni sospese temporaneamente. I dati mostrati potrebbero non essere aggiornati."
     : ui.snapError
       ? "Connessione assente: i dati potrebbero non essere aggiornati."
-      : "";
+      : ui.snap?.notice
+        ? `ℹ Avviso di QUI: ${ui.snap.notice}`
+        : "";
   banner.textContent = text;
   banner.hidden = !text;
 }

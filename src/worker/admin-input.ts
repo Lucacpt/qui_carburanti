@@ -12,6 +12,9 @@ export const MAX_FREEZE_HOURS = 3;
 /** L'indicazione di QUI vale al massimo 8 ore, come le segnalazioni (termini, punto 6). */
 export const MAX_STATE_HOURS = 8;
 export const MAX_NOTE = 200;
+/** L'avviso a tutti: una o due righe nell'app, al massimo 3 giorni. */
+export const MAX_NOTICE = 280;
+export const MAX_NOTICE_HOURS = 72;
 /** Segnalazioni annullabili in un colpo solo: tutte quelle di 8 ore su un impianto stanno sotto. */
 export const MAX_ANNUL = 200;
 
@@ -36,7 +39,23 @@ export type AdminCommand =
       readonly note: string;
       readonly hours: number;
     }
-  | { readonly kind: "clearState"; readonly station: number };
+  | {
+      readonly kind: "clearState";
+      readonly station: number;
+      /** null: tutte le indicazioni dell'impianto. */
+      readonly fuel: Fuel | null;
+    }
+  | {
+      readonly kind: "blockNet";
+      /** Una segnalazione arrivata da quella rete: l'admin non vede mai il codice intero. */
+      readonly report: number;
+      readonly annul: boolean;
+      readonly reason: string;
+    }
+  | { readonly kind: "unblock"; readonly net: string | null }
+  | { readonly kind: "close"; readonly station: number; readonly note: string }
+  | { readonly kind: "reopen"; readonly station: number }
+  | { readonly kind: "notice"; readonly text: string | null; readonly hours: number };
 
 const KEYS: Record<AdminCommand["kind"], readonly string[]> = {
   ack: ["ids"],
@@ -46,7 +65,12 @@ const KEYS: Record<AdminCommand["kind"], readonly string[]> = {
   readOnly: ["on"],
   annul: ["ids", "reason"],
   setState: ["station", "fuel", "state", "note", "hours"],
-  clearState: ["station"],
+  clearState: ["station", "fuel"],
+  blockNet: ["report", "annul", "reason"],
+  unblock: ["net"],
+  close: ["station", "note"],
+  reopen: ["station"],
+  notice: ["text", "hours"],
 };
 
 const fail = (error: string): { ok: false; error: string } => ({ ok: false, error });
@@ -54,13 +78,13 @@ const isId = (v: unknown): v is number =>
   typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 9_999_999;
 
 /** Testo mostrato a tutti o salvato nel registro: niente caratteri di controllo, lunghezza limitata. */
-function cleanNote(v: unknown): string | null {
+function cleanNote(v: unknown, max = MAX_NOTE): string | null {
   const note =
     typeof v === "string"
       ? // biome-ignore lint/suspicious/noControlCharactersInRegex: è proprio ciò che vogliamo rimuovere
         v.replace(/[\u0000-\u001f\u007f]/g, " ").trim()
       : "";
-  return note.length < 3 || note.length > MAX_NOTE ? null : note;
+  return note.length < 3 || note.length > max ? null : note;
 }
 
 const isHours = (v: unknown, max: number): v is number =>
@@ -106,9 +130,18 @@ export function parseAdminAction(
       return { ok: true, value: { prov, cmd: { kind, station: o.station, note, hours: o.hours } } };
     }
     case "unfreeze":
-    case "clearState":
+    case "reopen":
       if (!isId(o.station)) return fail("impianto non valido");
       return { ok: true, value: { prov, cmd: { kind, station: o.station } } };
+    case "clearState": {
+      if (!isId(o.station)) return fail("impianto non valido");
+      const fuel = o.fuel ?? null;
+      if (fuel !== null && !FUELS.includes(fuel as Fuel)) return fail("carburante non valido");
+      return {
+        ok: true,
+        value: { prov, cmd: { kind, station: o.station, fuel: fuel as Fuel | null } },
+      };
+    }
     case "readOnly":
       if (typeof o.on !== "boolean") return fail("valore non valido");
       return { ok: true, value: { prov, cmd: { kind, on: o.on } } };
@@ -125,6 +158,33 @@ export function parseAdminAction(
       const reason = cleanNote(o.reason);
       if (reason === null) return fail("motivazione da 3 a 200 caratteri");
       return { ok: true, value: { prov, cmd: { kind, ids: o.ids as number[], reason } } };
+    }
+    case "blockNet": {
+      if (!isId(o.report)) return fail("segnalazione non valida");
+      if (typeof o.annul !== "boolean") return fail("valore non valido");
+      const reason = cleanNote(o.reason);
+      if (reason === null) return fail("motivazione da 3 a 200 caratteri");
+      return { ok: true, value: { prov, cmd: { kind, report: o.report, annul: o.annul, reason } } };
+    }
+    case "unblock":
+      if (o.net !== null && !(typeof o.net === "string" && /^[0-9a-f]{4}$/.test(o.net))) {
+        return fail("rete non valida");
+      }
+      return { ok: true, value: { prov, cmd: { kind, net: o.net } } };
+    case "close": {
+      if (!isId(o.station)) return fail("impianto non valido");
+      // Mostrata a tutti nella scheda: dice da dove viene l'informazione.
+      const note = cleanNote(o.note);
+      if (note === null) return fail("nota da 3 a 200 caratteri");
+      return { ok: true, value: { prov, cmd: { kind, station: o.station, note } } };
+    }
+    case "notice": {
+      if (o.text === null)
+        return { ok: true, value: { prov, cmd: { kind, text: null, hours: 0 } } };
+      if (!isHours(o.hours, MAX_NOTICE_HOURS)) return fail(`da 1 a ${MAX_NOTICE_HOURS} ore`);
+      const text = cleanNote(o.text, MAX_NOTICE);
+      if (text === null) return fail(`avviso da 3 a ${MAX_NOTICE} caratteri`);
+      return { ok: true, value: { prov, cmd: { kind, text, hours: o.hours } } };
     }
     case "setState": {
       if (!isId(o.station)) return fail("impianto non valido");

@@ -61,3 +61,14 @@ Dopo il lancio il maintainer non aveva modo di intervenire su segnalazioni false
 Scartata la "conferma manuale" come segnalazione in più: avrebbe gonfiato i conteggi della community con un'informazione del titolare, contro "informazioni degli utenti, non verificate". L'indicazione di QUI copre lo stesso bisogno in modo trasparente.
 
 Termini (punto 6, v1.1) e informativa (punto 2.3, v1.1) aggiornati di conseguenza.
+
+## Revisione 3 (2026-10-24): tutti i controlli dell'admin
+Su richiesta del maintainer ("tutti i controlli possibili"), sempre dietro Access e nel registro delle azioni:
+
+- **Blocco di una rete** (`blockNet`): si parte da una segnalazione (l'admin non vede mai il codice intero), il `pkey` va in `blocked` fino alla mezzanotte UTC, quando la chiave del giorno cambia; le nuove segnalazioni da quella rete sono scartate in silenzio come gli altri abusi. Facoltativo: annulla anche quelle già arrivate. Rischio dichiarato nei termini: una rete può essere condivisa.
+- **Impianto chiuso** (`close`/`reopen`): nota con la fonte, nessuna scadenza, in fondo alla lista come "Chiuso secondo QUI"; escluso da "Mostra i più vicini con segnalazioni". Snapshot: `cl`.
+- **Avviso a tutti** (`notice`): fino a 280 caratteri, da 1 a 72 ore, nel banner dell'app dopo sola lettura e assenza di rete. Snapshot: `nt`.
+- **Notifiche del browser** per i nuovi avvisi con la pagina aperta (anche in secondo piano). Le notifiche a pagina chiusa (Web Push) restano da valutare: servirebbero un service worker e chiavi VAPID.
+- **Stato della provincia** dallo snapshot pubblico, **andamento** ora per ora, **contatto** del gestore cliccabile, **"Apri scheda"**, **registro completo in CSV** (`GET /api/admin/log`), menu rapido.
+
+Termini (punto 6) e informativa (punto 2.3) aggiornati.

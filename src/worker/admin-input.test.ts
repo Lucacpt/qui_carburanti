@@ -81,6 +81,29 @@ describe("parseAdminAction", () => {
     expect(ok({ fuel: "X" })).toBe(false);
     expect(ok({ note: "" })).toBe(false);
     expect(parseAdminAction({ p: "AV", kind: "clearState", station: 1001 }, P).ok).toBe(true);
+    expect(parseAdminAction({ p: "AV", kind: "clearState", station: 1001, fuel: "G" }, P).ok).toBe(
+      true,
+    );
+    expect(parseAdminAction({ p: "AV", kind: "clearState", station: 1001, fuel: "X" }, P).ok).toBe(
+      false,
+    );
+  });
+
+  it("blocco di una rete, chiusura, riapertura e avviso a tutti", () => {
+    const ok = (o: object) => parseAdminAction({ p: "AV", ...o }, P).ok;
+    expect(ok({ kind: "blockNet", report: 7, annul: true, reason: "spam" })).toBe(true);
+    expect(ok({ kind: "blockNet", report: 7, annul: "sì", reason: "spam" })).toBe(false);
+    expect(ok({ kind: "blockNet", report: 7, annul: false })).toBe(false);
+    expect(ok({ kind: "close", station: 1001, note: "Il gestore: chiuso" })).toBe(true);
+    expect(ok({ kind: "close", station: 1001, note: "" })).toBe(false);
+    expect(ok({ kind: "reopen", station: 1001 })).toBe(true);
+    expect(ok({ kind: "unblock", net: "3fa9" })).toBe(true);
+    expect(ok({ kind: "unblock", net: null })).toBe(true);
+    expect(ok({ kind: "unblock", net: "XYZ" })).toBe(false);
+    expect(ok({ kind: "notice", text: "Consegne domani", hours: 24 })).toBe(true);
+    expect(ok({ kind: "notice", text: null, hours: 0 })).toBe(true);
+    expect(ok({ kind: "notice", text: "Consegne domani", hours: 73 })).toBe(false);
+    expect(ok({ kind: "notice", text: "x".repeat(281), hours: 1 })).toBe(false);
   });
 
   it("rifiuta campi extra, comandi sconosciuti e province non attive", () => {

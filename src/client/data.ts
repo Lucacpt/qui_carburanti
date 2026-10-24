@@ -35,6 +35,10 @@ export interface SnapshotData {
   readonly frozen: ReadonlyMap<number, string>;
   /** Note delle indicazioni di QUI (ADR-0013 rev. 2), per chiave rowKey. */
   readonly official: ReadonlyMap<string, string>;
+  /** Impianti indicati come chiusi da QUI, con la nota. */
+  readonly closed: ReadonlyMap<number, string>;
+  /** Avviso del titolare a tutti, se attivo. */
+  readonly notice: string | null;
   /** Ultima disponibilità (ms) dei carburanti senza stato attuale, per chiave rowKey. */
   readonly lastGreen: ReadonlyMap<string, number>;
   /** Segnalazioni nell'ultima ora in provincia. */
@@ -101,6 +105,8 @@ export async function loadSnapshot(prov: string): Promise<SnapshotData> {
     s: SnapshotRow[];
     fz?: [number, string][];
     ov?: [number, Fuel, string][];
+    cl?: [number, string][];
+    nt?: string | null;
     lg?: LastGreenRow[];
     h?: number;
   };
@@ -110,6 +116,8 @@ export async function loadSnapshot(prov: string): Promise<SnapshotData> {
     rows: new Map(body.s.map((row) => [rowKey(row[0], row[1]), row])),
     frozen: new Map(body.fz ?? []),
     official: new Map((body.ov ?? []).map(([id, fuel, note]) => [rowKey(id, fuel), note])),
+    closed: new Map(body.cl ?? []),
+    notice: body.nt ?? null,
     lastGreen: new Map(
       (body.lg ?? []).map(([id, fuel, ageMin]) => [
         rowKey(id, fuel),

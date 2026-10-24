@@ -2,6 +2,7 @@
 //   GET  /api/admin/overview?p=AV         avvisi, contestazioni, congelamenti, statistiche, registro
 //   GET  /api/admin/history?p=AV&id=1234  storico anonimo di un impianto (30 giorni)
 //   GET  /api/admin/reports?p=AV          segnalazioni delle ultime 8 ore, senza codici dei segnalatori
+//   GET  /api/admin/log?p=AV              registro completo delle azioni (180 giorni), per l'esportazione
 //   POST /api/admin/action                comandi (vedi admin-input.ts)
 
 import { type AccessConfig, accessConfig, type Jwk, verifyAccessJwt } from "./access.ts";
@@ -86,6 +87,11 @@ export async function handleAdmin(
     if (url.pathname === "/api/admin/reports" && request.method === "GET") {
       if (!provinces.includes(prov)) throw new HttpError(400, "provincia non valida");
       return json(await province(prov).adminReports(), 200, NOINDEX);
+    }
+
+    if (url.pathname === "/api/admin/log" && request.method === "GET") {
+      if (!provinces.includes(prov)) throw new HttpError(400, "provincia non valida");
+      return json(await province(prov).adminLog(), 200, NOINDEX);
     }
 
     if (url.pathname === "/api/admin/history" && request.method === "GET") {

@@ -90,6 +90,11 @@ const SCHEMA = [
   `CREATE TABLE IF NOT EXISTS overrides (station INTEGER NOT NULL, fuel TEXT NOT NULL,
      state INTEGER NOT NULL, note TEXT NOT NULL, ts INTEGER NOT NULL, until INTEGER NOT NULL,
      PRIMARY KEY (station, fuel))`,
+  // Reti bloccate a mano fino a mezzanotte UTC, quando la chiave del giorno cambia e il codice
+  // di rete non vale più nulla.
+  "CREATE TABLE IF NOT EXISTS blocked (pkey TEXT PRIMARY KEY, until INTEGER NOT NULL)",
+  // Impianti indicati come chiusi da QUI, con la nota che ne dice la fonte, fino alla riapertura.
+  "CREATE TABLE IF NOT EXISTS closed (station INTEGER PRIMARY KEY, note TEXT NOT NULL, ts INTEGER NOT NULL)",
 ];
 
 export interface AdminOverview {
@@ -114,6 +119,10 @@ export interface AdminOverview {
   }>;
   readonly frozen: Array<{ station: number; until: number; note: string }>;
   readonly overrides: Array<Override & { until: number }>;
+  readonly closed: Array<{ station: number; note: string; ts: number }>;
+  readonly notice: Notice | null;
+  /** Reti bloccate adesso, con l'abbreviazione di 4 caratteri: mai il codice intero. */
+  readonly blocked: Array<{ net: string; until: number }>;
   readonly stats: Array<{ hour: number; fuel: string; pos: number; neg: number; dropped: number }>;
   readonly log: Array<{
     ts: number;
@@ -122,6 +131,16 @@ export interface AdminOverview {
     detail: string | null;
   }>;
 }
+
+/** Avviso mostrato a tutti in cima all'app, con scadenza. */
+export type Notice = { readonly text: string; readonly until: number };
+
+export type AdminLogRow = {
+  readonly ts: number;
+  readonly action: string;
+  readonly station: number | null;
+  readonly detail: string | null;
+};
 
 /** Indicazione di QUI su un carburante di un impianto. */
 export type Override = {
@@ -270,6 +289,9 @@ export class ProvinceStore {
     if (!this.consumePow(r.powSig, r.powExpiresMs)) return this.drop(r.fuel, now);
 
     // Timeout progressivo in corso.
+    if (this.first("SELECT 1 AS x FROM blocked WHERE pkey = ? AND until > ?", r.pkey, now)) {
+      return this.drop(r.fuel, now);
+    }
     const abuse = this.first<{ level: number; until: number }>(
       "SELECT level, until FROM abuse WHERE rkey = ?",
       r.rkey,
@@ -361,7 +383,12 @@ export class ProvinceStore {
     const lastHour = this.count("SELECT COUNT(*) AS n FROM reports WHERE ts > ?", now - HOUR);
     const snap = buildSnapshot(prov, now, entries, this.isReadOnly(), { lastGreen, lastHour });
     const ov = overrides.map((o) => [o.station, o.fuel, o.note]);
-    const body = JSON.stringify({ ...snap, fz: [...frozen], ov });
+    const cl = this.sql
+      .exec<{ station: number; note: string }>("SELECT station, note FROM closed ORDER BY station")
+      .toArray()
+      .map((c) => [c.station, c.note]);
+    const nt = this.notice(now)?.text ?? null;
+    const body = JSON.stringify({ ...snap, fz: [...frozen], ov, cl, nt });
     this.cache = { body, etag: `"${fnv1a(body)}"`, at: now };
     return this.cache;
   }
@@ -376,6 +403,9 @@ export class ProvinceStore {
     this.sql.exec("DELETE FROM abuse WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM frozen WHERE until <= ?", now);
     this.sql.exec("DELETE FROM overrides WHERE until <= ?", now);
+    this.sql.exec("DELETE FROM blocked WHERE until <= ?", now);
+    if (this.storedNotice() && !this.notice(now))
+      this.sql.exec("DELETE FROM config WHERE k = 'notice'");
     this.sql.exec("DELETE FROM transitions WHERE ts <= ?", now - RETENTION.transitionsMs);
     this.sql.exec("UPDATE contests SET contact = NULL WHERE ts <= ?", now - RETENTION.contactMs);
     this.sql.exec("DELETE FROM contests WHERE ts <= ?", now - RETENTION.contestsMs);
@@ -414,6 +444,8 @@ export class ProvinceStore {
       q("SELECT MIN(expires) AS t FROM pow_used"),
       q("SELECT MIN(until) AS t FROM frozen"),
       q("SELECT MIN(until) AS t FROM overrides"),
+      q("SELECT MIN(until) AS t FROM blocked"),
+      this.storedNotice()?.until ?? null,
     ].filter((t): t is number => t !== null);
     return times.length > 0 ? Math.min(...times) : null;
   }
@@ -492,6 +524,19 @@ export class ProvinceStore {
           now,
         )
         .toArray(),
+      closed: this.sql
+        .exec<AdminOverview["closed"][number]>(
+          "SELECT station, note, ts FROM closed ORDER BY ts DESC",
+        )
+        .toArray(),
+      notice: this.notice(now),
+      blocked: this.sql
+        .exec<{ pkey: string; until: number }>(
+          "SELECT pkey, until FROM blocked WHERE until > ? ORDER BY until",
+          now,
+        )
+        .toArray()
+        .map((b) => ({ net: fnv1a(b.pkey).slice(0, 4), until: b.until })),
       stats: this.sql
         .exec<AdminOverview["stats"][number]>(
           "SELECT hour, fuel, pos, neg, dropped FROM stats_hourly WHERE hour >= ? ORDER BY hour",
@@ -665,22 +710,122 @@ export class ProvinceStore {
     return true;
   }
 
-  /** Toglie le indicazioni di QUI da un impianto. `false` se non ce n'erano. */
-  clearState(id: number, now: number): boolean {
+  /**
+   * Blocca fino a mezzanotte UTC la rete da cui è arrivata una segnalazione: le sue prossime
+   * segnalazioni vengono scartate in silenzio. Con `annul` cancella anche quelle già arrivate.
+   * null se la segnalazione non c'è più.
+   */
+  blockNetwork(
+    reportId: number,
+    annul: boolean,
+    reason: string,
+    now: number,
+  ): { annulled: number } | null {
+    const row = this.first<{ pkey: string; station: number }>(
+      "SELECT pkey, station FROM reports WHERE rowid = ?",
+      reportId,
+    );
+    if (!row) return null;
+    const until = Math.floor(now / DAY) * DAY + DAY;
+    this.sql.exec(
+      "INSERT INTO blocked (pkey, until) VALUES (?, ?) ON CONFLICT(pkey) DO UPDATE SET until = excluded.until",
+      row.pkey,
+      until,
+    );
+    const net = fnv1a(row.pkey).slice(0, 4);
+    this.logAdmin("block_net", row.station, `rete ${net} fino a mezzanotte UTC · ${reason}`, now);
+    let annulled = 0;
+    if (annul) {
+      const ids = this.sql
+        .exec<{ id: number }>("SELECT rowid AS id FROM reports WHERE pkey = ?", row.pkey)
+        .toArray()
+        .map((r) => r.id);
+      annulled = this.annulReports(ids, `rete ${net} bloccata · ${reason}`, now);
+    }
+    return { annulled };
+  }
+
+  /**
+   * Sblocca una rete (per abbreviazione) o tutte (`null`): per un blocco dato per errore, per
+   * esempio su una rete condivisa. Restituisce quante ne ha sbloccate.
+   */
+  unblockNetworks(net: string | null, now: number): number {
+    const keys = this.sql
+      .exec<{ pkey: string }>("SELECT pkey FROM blocked")
+      .toArray()
+      .map((b) => b.pkey)
+      .filter((pkey) => net === null || fnv1a(pkey).slice(0, 4) === net);
+    for (const pkey of keys) this.sql.exec("DELETE FROM blocked WHERE pkey = ?", pkey);
+    if (keys.length > 0)
+      this.logAdmin("unblock_net", null, net === null ? "tutte le reti" : `rete ${net}`, now);
+    return keys.length;
+  }
+
+  /** Impianto indicato come chiuso da QUI, con la fonte, fino alla riapertura. */
+  closeStation(id: number, note: string, now: number): void {
+    this.sql.exec(
+      "INSERT INTO closed (station, note, ts) VALUES (?, ?, ?) ON CONFLICT(station) DO UPDATE SET note = excluded.note, ts = excluded.ts",
+      id,
+      note,
+      now,
+    );
+    this.logAdmin("close", id, note, now);
+    this.cache = undefined;
+  }
+
+  /** `false` se l'impianto non era segnato come chiuso. */
+  reopenStation(id: number, now: number): boolean {
+    if (!this.first("SELECT 1 AS x FROM closed WHERE station = ?", id)) return false;
+    this.sql.exec("DELETE FROM closed WHERE station = ?", id);
+    this.logAdmin("reopen", id, null, now);
+    this.cache = undefined;
+    return true;
+  }
+
+  /** Avviso a tutti per `hours` ore; `text` null lo toglie. */
+  setNotice(text: string | null, hours: number, now: number): void {
+    if (text === null) {
+      this.sql.exec("DELETE FROM config WHERE k = 'notice'");
+      this.logAdmin("notice", null, "tolto", now);
+    } else {
+      const v = JSON.stringify({ text, until: now + hours * HOUR });
+      this.sql.exec(
+        "INSERT INTO config (k, v) VALUES ('notice', ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v",
+        v,
+      );
+      this.logAdmin("notice", null, `${hours} h · ${text}`, now);
+    }
+    this.cache = undefined;
+  }
+
+  /** Tutto il registro delle azioni (180 giorni), per l'esportazione. */
+  adminLog(): AdminLogRow[] {
+    return this.sql
+      .exec<AdminLogRow>(
+        "SELECT ts, action, station, detail FROM admin_log ORDER BY ts DESC, id DESC",
+      )
+      .toArray();
+  }
+
+  /** Toglie le indicazioni di QUI da un impianto (un carburante o tutti). `false` se non ce n'erano. */
+  clearState(id: number, now: number, fuel: Fuel | null = null): boolean {
     const rows = this.sql
       .exec<{ fuel: string; state: number }>(
         "SELECT fuel, state FROM overrides WHERE station = ? AND until > ?",
         id,
         now,
       )
-      .toArray();
-    this.sql.exec("DELETE FROM overrides WHERE station = ?", id);
+      .toArray()
+      .filter((r) => fuel === null || r.fuel === fuel);
+    for (const r of rows) {
+      this.sql.exec("DELETE FROM overrides WHERE station = ? AND fuel = ?", id, r.fuel);
+    }
     if (rows.length === 0) return false;
     for (const { fuel, state } of rows) {
       const computed = this.stateOf(id, fuel as Fuel, now);
       this.logTransition(id, fuel as Fuel, now, { state }, computed, "clear");
     }
-    this.logAdmin("clear_state", id, null, now);
+    this.logAdmin("clear_state", id, fuel ?? "tutti i carburanti", now);
     this.cache = undefined;
     return true;
   }
@@ -848,6 +993,22 @@ export class ProvinceStore {
     this.logTransition(id, fuel, now, { state: ov.state }, this.stateOf(id, fuel, now), "users");
     const users = after.state === State.GREEN ? "verde" : "rosso";
     this.alert("override_superseded", id, fuel, `gli utenti segnalano ${users}`, now);
+  }
+
+  private storedNotice(): Notice | null {
+    const v = this.first<{ v: string }>("SELECT v FROM config WHERE k = 'notice'")?.v;
+    if (!v) return null;
+    try {
+      const n = JSON.parse(v) as Notice;
+      return typeof n.text === "string" && typeof n.until === "number" ? n : null;
+    } catch {
+      return null;
+    }
+  }
+
+  private notice(now: number): Notice | null {
+    const n = this.storedNotice();
+    return n && n.until > now ? n : null;
   }
 
   private activeOverrides(now: number): Override[] {
