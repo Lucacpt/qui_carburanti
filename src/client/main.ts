@@ -14,7 +14,7 @@ import {
   type SnapshotData,
   type Station,
 } from "./data.ts";
-import { centroid, distanceKm, formatDistance, NEAR_KM, type Point } from "./geo.ts";
+import { centroid, closest, distanceKm, formatDistance, NEAR_KM, type Point } from "./geo.ts";
 import {
   clearStoredData,
   currentToken,
@@ -38,7 +38,7 @@ import {
   REPORT_REMOTE_HELP,
   withTimeout,
 } from "./position.ts";
-import { findTown, matches, normalize, type Town, townArea } from "./search.ts";
+import { findTown, matches, normalize, searchSuggestions, type Town, townArea } from "./search.ts";
 import { secureUrl } from "./secure.ts";
 import { announce, h, onPullDown, openSheet, reliabilityBadge, STATE_UI } from "./view.ts";
 
@@ -82,9 +82,11 @@ const ui = {
   /** Posizione dell'utente: solo in memoria, mai salvata né inviata. */
   origin: null as Point | null,
   limit: PAGE,
-  /** Comuni della provincia (1,5 KB): caricati alla prima ricerca. */
+  /** Comuni della provincia (1,5 KB): per la ricerca e l'autocompletamento. */
   towns: null as Town[] | null,
   townsLoading: false,
+  /** "Mostra i più vicini con segnalazioni": il comune cercato e i suoi dintorni sono tutti grigi. */
+  expand: false,
 };
 
 const app = document.getElementById("app") as HTMLElement;
@@ -146,6 +148,7 @@ async function loadTownsOnce(): Promise<void> {
     // Offline: resta la lista vuota di prima; al prossimo tasto si riprova.
   } finally {
     ui.townsLoading = false;
+    fillSuggestions();
     updateResults();
   }
 }
@@ -167,12 +170,27 @@ function searchedTown(): Town | null {
 /** Attorno al comune cercato: i comuni vicini, non un'area di servizio a 40 km. */
 const TOWN_RADIUS_KM = 7;
 const TOWN_MIN_RESULTS = 5;
+/** Quanti distributori con segnalazioni aggiungere quando i dintorni sono tutti grigi. */
+const EXPAND_RESULTS = 10;
+
+/** Indicato come chiuso da QUI: in fondo alla lista, con la nota nella scheda. */
+function isClosed(id: number): boolean {
+  return ui.snap?.closed.has(id) ?? false;
+}
+
+/** C'è almeno uno stato (verde, ambra o rosso) per i carburanti scelti, e l'impianto è aperto. */
+function hasInfo(st: Station): boolean {
+  const best = bestFuel(st);
+  return !isClosed(st.id) && !!best && best.status.result.state !== State.GREY;
+}
 
 function sortedResults() {
   const town = searchedTown();
-  const results = town
+  const area = town
     ? townArea(ui.stations, town, TOWN_RADIUS_KM, TOWN_MIN_RESULTS)
     : ui.stations.filter((s) => matches(s.text, ui.query));
+  // Dintorni tutti grigi e richiesta di allargare: solo i più vicini di cui si sa qualcosa, ovunque siano.
+  const results = town && ui.expand ? closest(ui.stations, town, EXPAND_RESULTS, hasInfo) : area;
   const ref = town ?? referencePoint(results);
   const list = results
     .map((st) => ({ st, best: bestFuel(st), dist: ref ? distanceKm(ref, st) : null }))
@@ -181,6 +199,7 @@ function sortedResults() {
     )
     .sort(
       (a, b) =>
+        Number(isClosed(a.st.id)) - Number(isClosed(b.st.id)) ||
         STATE_UI[a.best.status.result.state].rank - STATE_UI[b.best.status.result.state].rank ||
         (a.dist ?? 0) - (b.dist ?? 0) ||
         b.best.status.reliability - a.best.status.reliability ||
@@ -251,8 +270,10 @@ function card(st: Station, best: { fuel: Fuel; status: FuelStatus }, dist: numbe
         dist !== null ? h("span", { class: "dist" }, formatDistance(dist)) : null,
       ),
       h("div", { class: "addr" }, `${st.address}, ${st.town}`),
-      statusLine(best.fuel, best.status),
-      ui.fuel === "all" && st.fuels.length > 1 ? fuelBadges(st) : null,
+      isClosed(st.id)
+        ? h("div", { class: "status s-red" }, h("strong", {}, "✕ Chiuso secondo QUI"))
+        : statusLine(best.fuel, best.status),
+      ui.fuel === "all" && st.fuels.length > 1 && !isClosed(st.id) ? fuelBadges(st) : null,
     ),
   );
 }
@@ -311,6 +332,32 @@ const invite = h(
   { class: "note-box", hidden: true },
   "In questo momento arrivano poche segnalazioni: lo stato si aggiorna appena qualcuno passa. Sei a un distributore? Aprilo e tocca «C'è» o «Non c'è»: aiuti chi cerca.",
 );
+/** Il comune cercato e i dintorni non hanno informazioni: allarga ai più vicini che ne hanno. */
+const expandButton = h(
+  "button",
+  {
+    type: "button",
+    class: "btn primary",
+    hidden: true,
+    onClick: () => {
+      ui.expand = true;
+      updateResults();
+    },
+  },
+  "🔎 Mostra i più vicini con segnalazioni",
+);
+/** Comuni e vie dei distributori, suggeriti dal telefono mentre si scrive (nessuna richiesta di rete). */
+const suggestions = h("datalist", { id: "q-suggest" });
+let suggested = false;
+
+function fillSuggestions(): void {
+  if (suggested || !ui.towns || ui.stations.length === 0) return;
+  suggested = true;
+  suggestions.replaceChildren(
+    ...searchSuggestions(ui.towns, ui.stations).map((value) => h("option", { value })),
+  );
+}
+
 const more = h(
   "button",
   {
@@ -360,12 +407,19 @@ const listView = h(
       placeholder: "Cerca comune, via o marchio",
       autocomplete: "off",
       enterkeyhint: "search",
+      list: "q-suggest",
+      onFocus: () => {
+        void loadTownsOnce();
+        fillSuggestions();
+      },
       onInput: (e) => {
         ui.query = (e.target as HTMLInputElement).value;
         ui.limit = PAGE;
+        ui.expand = false;
         updateResults();
       },
     }),
+    suggestions,
     posButton,
     posHelp,
     chips<FuelFilter>(
@@ -379,6 +433,7 @@ const listView = h(
     ),
   ),
   h("div", { class: "summary-row" }, summary, refreshButton),
+  expandButton,
   invite,
   results,
   more,
@@ -431,7 +486,15 @@ function updateResults(): void {
   const green = all.filter((x) => x.best.status.result.state === State.GREEN).length;
   const lastHour = ui.snap?.lastHour;
   const greenText = green > 0 ? ` · ${green} con carburante segnalato` : "";
-  if (town) {
+  const withInfo = all.filter((x) => x.best.status.result.state !== State.GREY).length;
+  if (town && ui.expand) {
+    summary.textContent =
+      withInfo > 0
+        ? `Nessuna informazione attorno a ${town.name} · ${
+            withInfo === 1 ? "il più vicino" : `i ${withInfo} più vicini`
+          } con segnalazioni` + greenText
+        : "Nessuna segnalazione in provincia per i carburanti scelti.";
+  } else if (town) {
     const own = all.filter((x) => normalize(x.st.town) === town.key).length;
     const around = all.length - own;
     const far = all.some((x) => (x.dist ?? 0) > TOWN_RADIUS_KM);
@@ -455,6 +518,8 @@ function updateResults(): void {
       (ui.origin || ui.query ? "" : " · cerca il tuo comune o usa la posizione");
   }
   invite.hidden = !ui.snap || green > 0 || all.length === 0;
+  expandButton.hidden =
+    !town || ui.expand || all.length === 0 || withInfo > 0 || !ui.stations.some(hasInfo);
   results.replaceChildren(
     ...all.slice(0, ui.limit).map(({ st, best, dist }) => card(st, best, dist)),
   );
@@ -504,6 +569,12 @@ async function share(st: Station): Promise<void> {
   }
 }
 
+/** Indicazione di QUI: la nota con la fonte, ben distinta dalle segnalazioni degli utenti. */
+function officialNote(id: number, fuel: Fuel): HTMLElement | null {
+  const note = ui.snap?.official.get(rowKey(id, fuel));
+  return note ? h("p", { class: "note-box" }, `ℹ Indicazione di QUI: ${note}`) : null;
+}
+
 function renderDetail(id: number): HTMLElement {
   const st = ui.byId.get(id);
   const back = h(
@@ -517,6 +588,7 @@ function renderDetail(id: number): HTMLElement {
   preparePow(PROV);
   const statuses = st.fuels.map((fuel) => ({ fuel, status: statusOf(st.id, fuel) }));
   const note = ui.snap?.frozen.get(st.id);
+  const closedNote = ui.snap?.closed.get(st.id);
   const operator = statuses.some((s) => describeState(s.status.result, now()).operatorLink);
   const readOnly = ui.snap?.readOnly ?? false;
 
@@ -530,11 +602,13 @@ function renderDetail(id: number): HTMLElement {
       ? h("p", { class: "muted" }, `A ${formatDistance(distanceKm(ui.origin, st))} da te`)
       : null,
     note ? h("p", { class: "note-box" }, `ℹ ${note}`) : null,
+    closedNote ? h("p", { class: "note-box" }, `⚠ Chiuso secondo QUI: ${closedNote}`) : null,
     ...statuses.map(({ fuel, status }) =>
       h(
         "section",
         { class: "fuel" },
         statusLine(fuel, status),
+        officialNote(st.id, fuel),
         readOnly
           ? h("p", { class: "muted" }, "Segnalazioni sospese temporaneamente.")
           : h(
@@ -955,7 +1029,9 @@ function renderBanner(): void {
     ? "Segnalazioni sospese temporaneamente. I dati mostrati potrebbero non essere aggiornati."
     : ui.snapError
       ? "Connessione assente: i dati potrebbero non essere aggiornati."
-      : "";
+      : ui.snap?.notice
+        ? `ℹ Avviso di QUI: ${ui.snap.notice}`
+        : "";
   banner.textContent = text;
   banner.hidden = !text;
 }
@@ -987,6 +1063,7 @@ async function init(): Promise<void> {
     return;
   }
   await refresh();
+  void loadTownsOnce();
   onPullDown({
     indicator: pullIndicator,
     enabled: () => listView.parentElement === app && !document.querySelector(".overlay"),

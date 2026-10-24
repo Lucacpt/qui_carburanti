@@ -49,3 +49,18 @@ export function centroid(points: readonly Point[]): Point | null {
   });
   return { lat: sum.lat / points.length, lon: sum.lon / points.length };
 }
+
+/** Gli `n` elementi più vicini a `p` tra quelli che soddisfano `keep`, a qualunque distanza. */
+export function closest<T extends Point>(
+  items: readonly T[],
+  p: Point,
+  n: number,
+  keep: (item: T) => boolean,
+): T[] {
+  return items
+    .filter(keep)
+    .map((item) => ({ item, km: distanceKm(p, item) }))
+    .sort((a, b) => a.km - b.km)
+    .slice(0, n)
+    .map((x) => x.item);
+}

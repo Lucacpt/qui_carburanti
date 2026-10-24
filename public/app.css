@@ -28,6 +28,11 @@
 * {
   box-sizing: border-box;
 }
+/* hidden vince sempre: .btn e altri impostano display e lo annullerebbero. */
+[hidden] {
+  /* biome-ignore lint/complexity/noImportantStyles: è l'unico modo perché hidden valga su ogni classe */
+  display: none !important;
+}
 body {
   margin: 0;
   font:
@@ -457,6 +462,16 @@ fieldset {
 }
 .admin-section {
   margin: 24px 0;
+  scroll-margin-top: 12px;
+}
+.admin-section h3 {
+  margin: 16px 0 8px;
+  font-size: 1rem;
+}
+nav.chips a.chip {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
 }
 .admin-list {
   list-style: none;
@@ -478,6 +493,7 @@ fieldset {
   align-items: center;
 }
 .admin-section select,
+.admin-section textarea,
 .sheet textarea,
 .sheet select {
   min-height: 44px;
@@ -487,6 +503,12 @@ fieldset {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 8px 10px;
+}
+.admin-section textarea,
+.sheet textarea {
+  display: block;
+  width: 100%;
+  margin: 8px 0;
 }
 .legal .card {
   margin: 10px 0;

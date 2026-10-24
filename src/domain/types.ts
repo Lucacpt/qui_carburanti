@@ -21,6 +21,11 @@ export const Flag = {
   RED_PENDING: 8,
   /** Era rosso, ma l'ultima assenza è più vecchia di `redTtlMs`: il distributore può essere stato rifornito. */
   RED_EXPIRED: 16,
+  /**
+   * Stato indicato dal titolare con una nota che ne dice la fonte ("indicazione di QUI", ADR-0013
+   * rev. 2): mai presentato come segnalazione degli utenti, decade appena loro danno uno stato chiaro.
+   */
+  OFFICIAL: 32,
 } as const;
 
 /** Coda segnalata insieme a una conferma: 1 nessuna, 2 breve (< 15'), 3 lunga (> 15'). */

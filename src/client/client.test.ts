@@ -234,3 +234,62 @@ describe("pagina aperta in http:// (es. link senza https da Instagram)", () => {
     expect(secureUrl(loc("http:", "127.0.0.1"))).toBeNull();
   });
 });
+
+import { closest } from "./geo.ts";
+import { searchSuggestions, streetName } from "./search.ts";
+
+describe("dintorni tutti grigi: i più vicini con segnalazioni, a qualunque distanza", () => {
+  const p = { lat: 41, lon: 15 };
+  const at = (name: string, dLat: number, info: boolean) => ({
+    name,
+    info,
+    lat: 41 + dLat,
+    lon: 15,
+  });
+  const items = [
+    at("vicino grigio", 0.01, false),
+    at("lontano verde", 0.4, true),
+    at("medio rosso", 0.2, true),
+  ];
+
+  it("ignora quelli senza informazioni e ordina per distanza", () => {
+    expect(closest(items, p, 5, (x) => x.info).map((x) => x.name)).toEqual([
+      "medio rosso",
+      "lontano verde",
+    ]);
+    expect(closest(items, p, 1, (x) => x.info).map((x) => x.name)).toEqual(["medio rosso"]);
+  });
+});
+
+describe("autocompletamento: comuni e vie dei distributori, senza rete", () => {
+  it("ripulisce gli indirizzi MIMIT: niente civico, CAP, SNC, km", () => {
+    expect(streetName("VIA ROMA 422 83032")).toBe("Via Roma");
+    expect(streetName("VIA VIA DEI MILLE 10 83037, MONTECALVO IRPINO (AV)")).toBe("Via dei Mille");
+    expect(streetName("Statale 7 Via Appia, Km. 304, dir. sud")).toBe("Statale 7 Via Appia");
+    expect(streetName("S.S. 7 BIS KM 58+984 IMP.Q8 SNC 83020")).toBe("S.S. 7 Bis");
+    expect(streetName("cda santa Barbara snc 83031")).toBe("Contrada Santa Barbara");
+  });
+
+  it("scarta ciò che non sembra una via", () => {
+    expect(streetName("MANFREDI 97 83042")).toBeNull();
+    expect(streetName("Autostrada A16 NAPOLI-CANOSA, Km. 106+500")).toBeNull();
+  });
+
+  it("prima i comuni con il nome giusto, poi le vie con il loro comune, senza doppioni", () => {
+    const towns: Town[] = [
+      { name: "Grottaminarda", key: "grottaminarda", lat: 41, lon: 15 },
+      { name: "Ariano Irpino", key: "ariano irpino", lat: 41, lon: 15 },
+    ];
+    const stations = [
+      { address: "VIA CARPIGNANO SNC 83035", town: "GROTTAMINARDA" },
+      { address: "VIA CARPIGNANO 12 83035", town: "GROTTAMINARDA" },
+      { address: "VIA ROMA 1", town: "MONTORO" },
+    ];
+    expect(searchSuggestions(towns, stations)).toEqual([
+      "Ariano Irpino",
+      "Grottaminarda",
+      "Via Carpignano, Grottaminarda",
+      "Via Roma, Montoro",
+    ]);
+  });
+});

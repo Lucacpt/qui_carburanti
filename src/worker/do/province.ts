@@ -8,8 +8,10 @@ import type { AdminCommand } from "../admin-input.ts";
 import type { Env } from "../env.ts";
 import { assertJurisdiction } from "../jurisdiction.ts";
 import {
+  type AdminLogRow,
   type AdminOverview,
   ProvinceStore,
+  type RecentReport,
   type ReportStatus,
   type SnapshotBody,
   type SqlLike,
@@ -74,10 +76,18 @@ export class ProvinceDO extends DurableObject<Env> {
     return this.store.stationHistory(id, now);
   }
 
+  async adminLog(): Promise<AdminLogRow[]> {
+    return this.store.adminLog();
+  }
+
+  async adminReports(): Promise<RecentReport[]> {
+    return this.store.recentReports(Date.now());
+  }
+
   async adminAction(
     prov: string,
     cmd: AdminCommand,
-  ): Promise<"ok" | "not_found" | "invalid_station"> {
+  ): Promise<"ok" | "not_found" | "invalid_station" | "invalid_fuel"> {
     const now = Date.now();
     await this.loadRegistry(prov, now);
     switch (cmd.kind) {
@@ -96,6 +106,36 @@ export class ProvinceDO extends DurableObject<Env> {
         return this.store.unfreeze(cmd.station, now) ? "ok" : "not_found";
       case "readOnly":
         this.store.adminReadOnly(cmd.on, now);
+        return "ok";
+      case "annul":
+        return this.store.annulReports(cmd.ids, cmd.reason, now) > 0 ? "ok" : "not_found";
+      case "setState": {
+        if (!this.store.knowsStation(cmd.station)) return "invalid_station";
+        const { station, fuel, state, note, hours } = cmd;
+        if (!this.store.adminSetState(station, fuel, state, note, hours, now))
+          return "invalid_fuel";
+        // L'indicazione deve scadere da sola anche se nessuno segnala.
+        await this.ensureAlarm(now);
+        return "ok";
+      }
+      case "clearState":
+        return this.store.clearState(cmd.station, now, cmd.fuel) ? "ok" : "not_found";
+      case "blockNet":
+        // La segnalazione può essere appena scaduta (8 ore): allora non c'è più nulla da bloccare.
+        if (!this.store.blockNetwork(cmd.report, cmd.annul, cmd.reason, now)) return "not_found";
+        await this.ensureAlarm(now);
+        return "ok";
+      case "unblock":
+        return this.store.unblockNetworks(cmd.net, now) > 0 ? "ok" : "not_found";
+      case "close":
+        if (!this.store.knowsStation(cmd.station)) return "invalid_station";
+        this.store.closeStation(cmd.station, cmd.note, now);
+        return "ok";
+      case "reopen":
+        return this.store.reopenStation(cmd.station, now) ? "ok" : "not_found";
+      case "notice":
+        this.store.setNotice(cmd.text, cmd.hours, now);
+        if (cmd.text !== null) await this.ensureAlarm(now);
         return "ok";
     }
   }

@@ -33,7 +33,7 @@
   </header>
   <main class="page legal">
     <h2>Termini d'uso</h2>
-    <p class="muted small">Versione 1 · aggiornati il 23 ottobre 2026 · <a
+    <p class="muted small">Versione 1.1 · aggiornati il 24 ottobre 2026 · <a
         href="https://github.com/Lucacpt/qui_carburanti/commits/main/public/termini.html">tutte le modifiche</a></p>
 
 
@@ -131,8 +131,9 @@
     </p>
 
     <h3 id="moderazione">6. Come vengono gestite le segnalazioni</h3>
-    <p>Le segnalazioni non contengono testo libero: solo "c'è" o "non c'è", con coda e limite facoltativi. Non le
-      modifichiamo una per una: le combiniamo con regole pubbliche, uguali per tutti.</p>
+    <p>Le segnalazioni non contengono testo libero: solo "c'è" o "non c'è", con coda e limite facoltativi. Di norma non le
+      modifichiamo una per una: le combiniamo con regole pubbliche, uguali per tutti. Le eccezioni sono gli interventi
+      umani elencati qui sotto.</p>
     <p><strong>Regole automatiche</strong> (dettagli in <a href="/come-funziona">Come funziona</a>):</p>
     <ul>
       <li>una segnalazione dal posto pesa <span data-legal="wNear">1</span>, una da remoto <span
@@ -156,6 +157,20 @@
         con una nota attribuita, al massimo per 3 ore, e mai come "Disponibile";</li>
       <li><strong>sola lettura</strong> di una provincia in caso di attacco o di anomalie, con un avviso visibile a
         tutti;</li>
+      <li><strong>annullamento</strong> di segnalazioni palesemente false o inviate in serie (per esempio molte dalla
+        stessa rete in pochi minuti): lo stato si ricalcola subito e la motivazione resta nel registro delle azioni;</li>
+      <li><strong>indicazione di QUI</strong>: uno stato ("Disponibile secondo QUI" o "Segnalato esaurito da QUI")
+        pubblicato dal titolare con una nota che ne indica la fonte, per esempio una telefonata del gestore. È sempre
+        mostrata come tale, mai come segnalazione degli utenti, vale al massimo
+        <span data-legal="officialMaxMs">8 ore</span> e decade appena le segnalazioni degli utenti arrivate dopo
+        danno uno stato chiaro;</li>
+      <li><strong>impianto chiuso</strong>: un distributore indicato come chiuso, con una nota che ne dice la fonte
+        (per esempio il gestore), resta in fondo alla lista come "Chiuso secondo QUI" finché non viene riaperto;</li>
+      <li><strong>blocco di una rete</strong> da cui arrivano segnalazioni false in serie: le sue segnalazioni vengono
+        ignorate fino alla mezzanotte (UTC), quando il codice della rete cambia, o finché non togliamo il blocco. Una rete può essere condivisa da più
+        persone, per questo lo usiamo solo per lo spam evidente;</li>
+      <li><strong>avviso a tutti</strong> in cima all'app ("Avviso di QUI"), per comunicazioni utili durante la carenza,
+        con la fonte quando serve e una scadenza;</li>
       <li><strong>correzione dell'anagrafica</strong>, se i dati di un impianto sono sbagliati.</li>
     </ul>
     <p>Non usiamo profilazione né intelligenza artificiale per decidere sulle segnalazioni. Se non sei d'accordo con una

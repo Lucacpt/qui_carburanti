@@ -48,3 +48,27 @@ Vincoli: un solo maintainer, nessun account per gli utenti, nessun dato personal
 2. [x] Pagina `/admin` verificata in emulazione mobile; CSRF e chiusura senza configurazione provate in locale
 3. [ ] Configurare Cloudflare Access e i tre secret
 4. [ ] Notifiche degli avvisi
+
+## Revisione 2 (2026-10-24): moderazione delle segnalazioni
+Dopo il lancio il maintainer non aveva modo di intervenire su segnalazioni false o di correggere uno stato saputo per altre vie (es. telefonata del gestore). Aggiunto, sempre dietro Access:
+
+- **Ultime segnalazioni** (`GET /api/admin/reports`): le ultime 8 ore con distributore, carburante, esito, sul posto/remoto, orario e `net`, un'abbreviazione di 4 caratteri (FNV-1a) del codice di rete. Mai `rkey`/`pkey`: il codice di rete cambia ogni giorno con la chiave e l'abbreviazione serve solo a riconoscere una serie dalla stessa rete. Informativa, punto 2.3.
+- **Annullamento** (`annul`, fino a 200 per volta, motivazione obbligatoria): cancella le segnalazioni, ricalcola subito lo stato (causa `annul` nel registro anonimo) e toglie l'"ultima disponibilità" se tra le annullate c'era un "c'è". La motivazione resta in `admin_log`.
+- **Indicazione di QUI** (`setState`/`clearState`): stato verde o rosso su un carburante o su tutti, con una nota che ne dice la fonte, da 1 a 8 ore (`MAX_STATE_HOURS`, citato nei termini). Nello snapshot ha il flag `OFFICIAL`, nessun conteggio degli utenti e la nota in `ov`; l'app la mostra come "Disponibile secondo QUI" / "Segnalato esaurito da QUI", mai come segnalazione degli utenti.
+- **Cede agli utenti** (scelta del maintainer): se le segnalazioni arrivate *dopo* l'indicazione danno da sole uno stato chiaro (verde o rosso), l'indicazione decade e arriva l'avviso `override_superseded`. Quelle arrivate prima non contano.
+- **Ricerca per nome** nella pagina admin: niente più codici d'impianto da ricordare.
+
+Scartata la "conferma manuale" come segnalazione in più: avrebbe gonfiato i conteggi della community con un'informazione del titolare, contro "informazioni degli utenti, non verificate". L'indicazione di QUI copre lo stesso bisogno in modo trasparente.
+
+Termini (punto 6, v1.1) e informativa (punto 2.3, v1.1) aggiornati di conseguenza.
+
+## Revisione 3 (2026-10-24): tutti i controlli dell'admin
+Su richiesta del maintainer ("tutti i controlli possibili"), sempre dietro Access e nel registro delle azioni:
+
+- **Blocco di una rete** (`blockNet`): si parte da una segnalazione (l'admin non vede mai il codice intero), il `pkey` va in `blocked` fino alla mezzanotte UTC, quando la chiave del giorno cambia; le nuove segnalazioni da quella rete sono scartate in silenzio come gli altri abusi. Facoltativo: annulla anche quelle già arrivate. Rischio dichiarato nei termini: una rete può essere condivisa.
+- **Impianto chiuso** (`close`/`reopen`): nota con la fonte, nessuna scadenza, in fondo alla lista come "Chiuso secondo QUI"; escluso da "Mostra i più vicini con segnalazioni". Snapshot: `cl`.
+- **Avviso a tutti** (`notice`): fino a 280 caratteri, da 1 a 72 ore, nel banner dell'app dopo sola lettura e assenza di rete. Snapshot: `nt`.
+- **Notifiche del browser** per i nuovi avvisi con la pagina aperta (anche in secondo piano). Le notifiche a pagina chiusa (Web Push) restano da valutare: servirebbero un service worker e chiavi VAPID.
+- **Stato della provincia** dallo snapshot pubblico, **andamento** ora per ora, **contatto** del gestore cliccabile, **"Apri scheda"**, **registro completo in CSV** (`GET /api/admin/log`), menu rapido.
+
+Termini (punto 6) e informativa (punto 2.3) aggiornati.

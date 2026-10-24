@@ -58,6 +58,15 @@ export function describeState(
   const lastAbs = ago(s.lastAbsenceMs, now);
   const lastConf = ago(s.lastConfirmMs, now);
 
+  // Indicazione del titolare: attribuita a QUI, mai confusa con le segnalazioni degli utenti.
+  if (s.flags & Flag.OFFICIAL && (s.state === State.GREEN || s.state === State.RED)) {
+    return {
+      title: s.state === State.GREEN ? "Disponibile secondo QUI" : "Segnalato esaurito da QUI",
+      detail: `indicazione di QUI ${lastConf}`,
+      operatorLink: s.state === State.RED,
+    };
+  }
+
   if (s.state === State.GREY) {
     if (lastGreenMs !== null) {
       return {

@@ -304,3 +304,175 @@ describe("ProvinceStore — snapshot e congelamento", () => {
     expect(body.fz).toEqual([[STATION, "Il gestore segnala: rifornimento alle 14:20"]]);
   });
 });
+
+describe("ProvinceStore — moderazione (ADR-0013 rev. 2)", () => {
+  const HOUR = 60 * MIN;
+  type Body = {
+    s: Array<[number, string, number, number, number, number, number, number]>;
+    ov: unknown[];
+  };
+  const snap = (t: number) => JSON.parse(store.snapshot("AV", t).body) as Body;
+  const row = (b: Body, fuel = "B") => b.s.find((r) => r[0] === STATION && r[1] === fuel);
+
+  it("ultime segnalazioni: dalla più recente, con un codice di rete di 4 caratteri e nessun codice dei segnalatori", () => {
+    store.report(rep({ pkey: "rete-A" }), T0);
+    store.report(rep({ pkey: "rete-A", has: false }), T0 + MIN);
+    store.report(rep({ pkey: "rete-B" }), T0 + 2 * MIN);
+    const list = store.recentReports(T0 + 3 * MIN);
+    expect(list.map((r) => r.ts)).toEqual([T0 + 2 * MIN, T0 + MIN, T0]);
+    expect(list[0]?.net).toMatch(/^[0-9a-f]{4}$/);
+    expect(list[1]?.net).toBe(list[2]?.net);
+    expect(list[0]?.net).not.toBe(list[1]?.net);
+    for (const r of list) expect(Object.keys(r)).not.toContain("pkey");
+    for (const r of list) expect(Object.keys(r)).not.toContain("rkey");
+  });
+
+  it("annullare segnalazioni ricalcola subito lo stato, toglie l'ultima disponibilità e resta nel registro", () => {
+    for (let i = 0; i < 3; i++) store.report(rep(), T0 + i * MIN);
+    expect(store.stateOf(STATION, "B", T0 + 3 * MIN).state).toBe(State.GREEN);
+    const ids = store.recentReports(T0 + 3 * MIN).map((r) => r.id);
+    expect(store.annulReports(ids.slice(0, 2), "spam in serie", T0 + 4 * MIN)).toBe(2);
+    expect(store.stateOf(STATION, "B", T0 + 4 * MIN).state).not.toBe(State.GREEN);
+    expect(store.recentReports(T0 + 4 * MIN)).toHaveLength(1);
+    expect(rows<{ ts: number }>("SELECT ts FROM last_green")).toHaveLength(0);
+    expect(
+      rows<{ cause: string }>("SELECT cause FROM transitions WHERE cause = 'annul'"),
+    ).toHaveLength(1);
+    expect(store.adminOverview(T0 + 4 * MIN).log[0]).toMatchObject({
+      action: "annul",
+      station: STATION,
+      detail: "2 segnalazioni · spam in serie",
+    });
+    expect(store.annulReports([99999], "niente", T0 + 5 * MIN)).toBe(0);
+  });
+
+  it("indicazione di QUI: si vede anche senza segnalazioni, con la nota e senza conteggi degli utenti", () => {
+    expect(store.adminSetState(STATION, null, "red", "Il gestore: cisterne vuote", 2, T0)).toBe(
+      true,
+    );
+    const b = snap(T0 + 5 * MIN);
+    for (const fuel of ["B", "G"]) {
+      const r = row(b, fuel);
+      expect(r?.slice(2, 5)).toEqual([State.RED, 0, 0]);
+      expect(r?.[7]).toBe(0);
+      expect((r?.[6] ?? 0) & Flag.OFFICIAL).toBe(Flag.OFFICIAL);
+    }
+    expect(b.ov).toEqual([
+      [STATION, "B", "Il gestore: cisterne vuote"],
+      [STATION, "G", "Il gestore: cisterne vuote"],
+    ]);
+    expect(store.adminOverview(T0).overrides).toHaveLength(2);
+    // carburante non venduto dall'impianto
+    expect(store.adminSetState(STATION, "M", "green", "Verificato", 1, T0)).toBe(false);
+  });
+
+  it("cede agli utenti: se dopo l'indicazione segnalano uno stato chiaro, l'indicazione decade con un avviso", () => {
+    store.adminSetState(STATION, "B", "red", "Il gestore: esaurito alle 12", 4, T0);
+    for (let i = 1; i <= 2; i++) store.report(rep(), T0 + i * MIN);
+    expect(row(snap(T0 + 3 * MIN))?.[2]).toBe(State.RED);
+    store.report(rep(), T0 + 3 * MIN);
+    const r = row(snap(T0 + 4 * MIN));
+    expect(r?.[2]).toBe(State.GREEN);
+    expect((r?.[6] ?? 0) & Flag.OFFICIAL).toBe(0);
+    expect(store.adminOverview(T0 + 4 * MIN).alerts[0]).toMatchObject({
+      kind: "override_superseded",
+      station: STATION,
+      detail: "gli utenti segnalano verde",
+    });
+  });
+
+  it("le segnalazioni arrivate PRIMA dell'indicazione non la fanno decadere", () => {
+    for (let i = 0; i < 3; i++) store.report(rep(), T0 + i * MIN);
+    store.adminSetState(STATION, "B", "red", "Il gestore: finito ora", 2, T0 + 5 * MIN);
+    store.report(rep({ has: false }), T0 + 6 * MIN);
+    expect(row(snap(T0 + 7 * MIN))?.[2]).toBe(State.RED);
+    expect(store.adminOverview(T0 + 7 * MIN).overrides).toHaveLength(1);
+  });
+
+  it("scade da sola e si può togliere prima; ogni passo resta nel registro", () => {
+    store.adminSetState(STATION, "B", "green", "Verificato da QUI per telefono", 1, T0);
+    expect(row(snap(T0 + 30 * MIN))?.[2]).toBe(State.GREEN);
+    expect(row(snap(T0 + HOUR + MIN))).toBeUndefined();
+    store.maintenance(T0 + HOUR + MIN);
+    expect(rows("SELECT * FROM overrides")).toHaveLength(0);
+
+    store.adminSetState(STATION, "B", "green", "Verificato da QUI per telefono", 2, T0 + 2 * HOUR);
+    store.adminSetState(STATION, "G", "red", "Il gestore: gasolio finito", 2, T0 + 2 * HOUR);
+    expect(store.clearState(STATION, T0 + 2 * HOUR + MIN, "G")).toBe(true);
+    expect(store.adminOverview(T0 + 2 * HOUR + MIN).overrides.map((o) => o.fuel)).toEqual(["B"]);
+    expect(store.clearState(STATION, T0 + 2 * HOUR + MIN)).toBe(true);
+    expect(store.clearState(STATION, T0 + 2 * HOUR + MIN)).toBe(false);
+    expect(row(snap(T0 + 2 * HOUR + 2 * MIN))).toBeUndefined();
+    const actions = store.adminOverview(T0 + 3 * HOUR).log.map((l) => l.action);
+    expect(actions).toEqual(["clear_state", "clear_state", "set_state", "set_state", "set_state"]);
+  });
+});
+
+describe("ProvinceStore — altri controlli dell'admin (ADR-0013 rev. 3)", () => {
+  const DAY = 24 * 60 * MIN;
+  type Body = { cl: [number, string][]; nt: string | null };
+  const snap = (t: number) => JSON.parse(store.snapshot("AV", t).body) as Body;
+
+  it("blocca la rete di una segnalazione fino a mezzanotte UTC: le nuove si scartano in silenzio", () => {
+    store.report(rep({ pkey: "spammer" }), T0);
+    store.report(rep({ pkey: "onesto" }), T0 + MIN);
+    const id = store.recentReports(T0 + 2 * MIN).find((r) => r.ts === T0)?.id ?? 0;
+    expect(store.blockNetwork(id, true, "spam in serie", T0 + 2 * MIN)).toEqual({ annulled: 1 });
+    expect(store.report(rep({ pkey: "spammer" }), T0 + 3 * MIN)).toBe("dropped");
+    expect(store.report(rep({ pkey: "onesto" }), T0 + 4 * MIN)).toBe("accepted");
+    // la chiave del giorno cambia a mezzanotte: il blocco finisce lì
+    const midnight = Math.floor(T0 / DAY) * DAY + DAY;
+    expect(store.report(rep({ pkey: "spammer" }), midnight + MIN)).toBe("accepted");
+    const blocked = store.adminOverview(T0 + 5 * MIN).blocked;
+    expect(blocked).toHaveLength(1);
+    expect(blocked[0]?.net).toMatch(/^[0-9a-f]{4}$/);
+    expect(JSON.stringify(blocked)).not.toContain("spammer");
+    const log = store.adminOverview(T0 + 5 * MIN).log.map((l) => l.action);
+    expect(log).toContain("block_net");
+    expect(log).toContain("annul");
+    expect(JSON.stringify(store.adminLog())).not.toContain("spammer");
+    expect(store.blockNetwork(99999, false, "niente", T0)).toBeNull();
+  });
+
+  it("un blocco dato per errore si toglie subito, rete per rete o tutte insieme", () => {
+    store.report(rep({ pkey: "ufficio" }), T0);
+    store.report(rep({ pkey: "altra" }), T0 + MIN);
+    for (const r of store.recentReports(T0 + 2 * MIN))
+      store.blockNetwork(r.id, false, "spam", T0 + 2 * MIN);
+    const [first] = store.adminOverview(T0 + 3 * MIN).blocked;
+    expect(store.unblockNetworks(first?.net ?? "", T0 + 3 * MIN)).toBe(1);
+    expect(store.adminOverview(T0 + 3 * MIN).blocked).toHaveLength(1);
+    expect(store.unblockNetworks(null, T0 + 4 * MIN)).toBe(1);
+    expect(store.report(rep({ pkey: "ufficio" }), T0 + 5 * MIN)).toBe("accepted");
+    expect(store.unblockNetworks(null, T0 + 6 * MIN)).toBe(0);
+  });
+
+  it("impianto chiuso: nello snapshot con la nota finché non si riapre", () => {
+    store.closeStation(STATION, "Il gestore: chiuso per lavori fino a lunedì", T0);
+    expect(snap(T0 + MIN).cl).toEqual([[STATION, "Il gestore: chiuso per lavori fino a lunedì"]]);
+    expect(store.adminOverview(T0).closed).toHaveLength(1);
+    expect(store.reopenStation(STATION, T0 + 2 * MIN)).toBe(true);
+    expect(store.reopenStation(STATION, T0 + 2 * MIN)).toBe(false);
+    expect(snap(T0 + 3 * MIN).cl).toEqual([]);
+  });
+
+  it("avviso a tutti: nello snapshot fino alla scadenza, poi sparisce anche dal database", () => {
+    store.setNotice("Consegne previste domani mattina ad Ariano", 2, T0);
+    expect(snap(T0 + MIN).nt).toBe("Consegne previste domani mattina ad Ariano");
+    expect(store.adminOverview(T0 + MIN).notice?.text).toBe(
+      "Consegne previste domani mattina ad Ariano",
+    );
+    expect(snap(T0 + 3 * 60 * MIN).nt).toBeNull();
+    store.maintenance(T0 + 3 * 60 * MIN);
+    expect(rows("SELECT * FROM config WHERE k = 'notice'")).toHaveLength(0);
+    store.setNotice("Altro avviso", 1, T0);
+    store.setNotice(null, 0, T0 + MIN);
+    expect(snap(T0 + 2 * MIN).nt).toBeNull();
+  });
+
+  it("il registro completo esce tutto, dal più recente", () => {
+    store.adminReadOnly(true, T0);
+    store.adminReadOnly(false, T0 + MIN);
+    expect(store.adminLog().map((l) => l.detail)).toEqual(["disattivata", "attivata"]);
+  });
+});

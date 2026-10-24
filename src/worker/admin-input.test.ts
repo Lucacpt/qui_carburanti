@@ -42,6 +42,70 @@ describe("parseAdminAction", () => {
     ).toBe(false);
   });
 
+  it("annullamento: da 1 a 200 segnalazioni, sempre con una motivazione", () => {
+    expect(
+      parseAdminAction({ p: "AV", kind: "annul", ids: [5, 6], reason: " spam	in serie " }, P),
+    ).toEqual({
+      ok: true,
+      value: { prov: "AV", cmd: { kind: "annul", ids: [5, 6], reason: "spam in serie" } },
+    });
+    const bad = (o: object) => parseAdminAction({ p: "AV", kind: "annul", ...o }, P).ok;
+    expect(bad({ ids: [], reason: "spam" })).toBe(false);
+    expect(bad({ ids: Array.from({ length: 201 }, (_, i) => i + 1), reason: "spam" })).toBe(false);
+    expect(bad({ ids: [1.5], reason: "spam" })).toBe(false);
+    expect(bad({ ids: [1] })).toBe(false);
+    expect(bad({ ids: [1], reason: "no" })).toBe(false);
+  });
+
+  it("stato impostato da QUI: verde o rosso, carburante o tutti, da 1 a 8 ore, con la fonte", () => {
+    const cmd = { p: "AV", kind: "setState", station: 1001, fuel: "B", state: "green", hours: 2 };
+    expect(parseAdminAction({ ...cmd, note: "Il gestore ha confermato per telefono" }, P)).toEqual({
+      ok: true,
+      value: {
+        prov: "AV",
+        cmd: {
+          kind: "setState",
+          station: 1001,
+          fuel: "B",
+          state: "green",
+          note: "Il gestore ha confermato per telefono",
+          hours: 2,
+        },
+      },
+    });
+    const ok = (o: object) => parseAdminAction({ ...cmd, note: "Verificato", ...o }, P).ok;
+    expect(ok({ fuel: null, state: "red", hours: 8 })).toBe(true);
+    expect(ok({ hours: 9 })).toBe(false);
+    expect(ok({ hours: 0 })).toBe(false);
+    expect(ok({ state: "amber" })).toBe(false);
+    expect(ok({ fuel: "X" })).toBe(false);
+    expect(ok({ note: "" })).toBe(false);
+    expect(parseAdminAction({ p: "AV", kind: "clearState", station: 1001 }, P).ok).toBe(true);
+    expect(parseAdminAction({ p: "AV", kind: "clearState", station: 1001, fuel: "G" }, P).ok).toBe(
+      true,
+    );
+    expect(parseAdminAction({ p: "AV", kind: "clearState", station: 1001, fuel: "X" }, P).ok).toBe(
+      false,
+    );
+  });
+
+  it("blocco di una rete, chiusura, riapertura e avviso a tutti", () => {
+    const ok = (o: object) => parseAdminAction({ p: "AV", ...o }, P).ok;
+    expect(ok({ kind: "blockNet", report: 7, annul: true, reason: "spam" })).toBe(true);
+    expect(ok({ kind: "blockNet", report: 7, annul: "sì", reason: "spam" })).toBe(false);
+    expect(ok({ kind: "blockNet", report: 7, annul: false })).toBe(false);
+    expect(ok({ kind: "close", station: 1001, note: "Il gestore: chiuso" })).toBe(true);
+    expect(ok({ kind: "close", station: 1001, note: "" })).toBe(false);
+    expect(ok({ kind: "reopen", station: 1001 })).toBe(true);
+    expect(ok({ kind: "unblock", net: "3fa9" })).toBe(true);
+    expect(ok({ kind: "unblock", net: null })).toBe(true);
+    expect(ok({ kind: "unblock", net: "XYZ" })).toBe(false);
+    expect(ok({ kind: "notice", text: "Consegne domani", hours: 24 })).toBe(true);
+    expect(ok({ kind: "notice", text: null, hours: 0 })).toBe(true);
+    expect(ok({ kind: "notice", text: "Consegne domani", hours: 73 })).toBe(false);
+    expect(ok({ kind: "notice", text: "x".repeat(281), hours: 1 })).toBe(false);
+  });
+
   it("rifiuta campi extra, comandi sconosciuti e province non attive", () => {
     expect(parseAdminAction({ p: "AV", kind: "readOnly", on: true, x: 1 }, P)).toEqual({
       ok: false,
