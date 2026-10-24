@@ -81,6 +81,7 @@ Per tornare alla pagina d'attesa, ad esempio durante un problema serio, togli la
    ```
 3. *Actions → Deploy*: aspetta lo staging, poi approva **production**.
 4. Lo smoke test in produzione è in **sola lettura**: controlla salute, intestazioni di sicurezza, sfida PoW, snapshot e chiusura dell'area admin, senza creare segnalazioni.
+5. Se tutto è andato bene, il job **release** crea la Release su GitHub (titolo = tag, note generate dalle PR unite). Se la Release esiste già, non la modifica.
 
 ## Una volta l'anno
 `public/.well-known/security.txt` ha una scadenza obbligatoria (`Expires`, RFC 9116). Un mese prima il test `scripts/security-txt.test.ts` fallisce: sposta la data avanti di un anno al massimo e rilascia.

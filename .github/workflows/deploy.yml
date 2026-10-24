@@ -111,3 +111,27 @@ jobs:
 
       - name: Smoke test in sola lettura
         run: node scripts/smoke.ts https://quicarburanti.it --sola-lettura
+
+  # La Release su GitHub (pagina del repository, "Releases") solo a produzione riuscita.
+  # Job a parte: è l'unico con permesso di scrittura e non vede i secret di Cloudflare.
+  release:
+    name: release
+    needs: production
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write
+    steps:
+      - uses: step-security/harden-runner@dc2769abcc0fcfbadfc1df54081c1608579ef6b2 # v2.22.2
+        with:
+          egress-policy: audit
+
+      # Note generate dalle PR unite dall'ultima Release. Se esiste già (creata a mano), non si tocca.
+      - name: Release su GitHub
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 && exit 0
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --verify-tag \
+            --title "$TAG" --generate-notes --latest
