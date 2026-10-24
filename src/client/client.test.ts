@@ -166,3 +166,48 @@ describe("posizione che non arriva (es. browser interno di Instagram)", () => {
     expect(positionHelp({ code: 3 })).toBe(POSITION_HELP.unavailable);
   });
 });
+
+import { PULL_TRIGGER_PX, pullProgress } from "./pull.ts";
+import { townArea } from "./search.ts";
+
+describe("ricerca di un comune che ha distributori: anche i vicini", () => {
+  const town: Town = { name: "Grottaminarda", key: "grottaminarda", lat: 41, lon: 15 };
+  // ~1,1 km per 0,01° di latitudine
+  const st = (name: string, comune: string, dLat: number) => ({
+    name,
+    town: comune,
+    lat: 41 + dLat,
+    lon: 15,
+  });
+  const stations = [
+    st("in paese", "GROTTAMINARDA", 0.01),
+    st("frazione lontana", "Grottaminarda", 0.2),
+    st("comune vicino", "Mirabella Eclano", 0.05),
+    st("altra valle", "Lioni", 0.4),
+  ];
+
+  it("i distributori del comune, anche lontani dal centro, più quelli entro il raggio", () => {
+    expect(
+      townArea(stations, town, 15, 1)
+        .map((s) => s.name)
+        .sort(),
+    ).toEqual(["comune vicino", "frazione lontana", "in paese"]);
+  });
+
+  it("se nel raggio ce ne sono pochi, comunque i più vicini", () => {
+    expect(townArea(stations, town, 1, 3).map((s) => s.name)).toContain("comune vicino");
+  });
+});
+
+describe("tira giù per aggiornare", () => {
+  it("l'indicatore cresce con il dito, fino a un massimo", () => {
+    expect(pullProgress(-20)).toEqual({ height: 0, ready: false });
+    expect(pullProgress(40)).toEqual({ height: 20, ready: false });
+    expect(pullProgress(1000).height).toBe(75);
+  });
+
+  it("al rilascio aggiorna solo oltre la soglia", () => {
+    expect(pullProgress(PULL_TRIGGER_PX - 1).ready).toBe(false);
+    expect(pullProgress(PULL_TRIGGER_PX).ready).toBe(true);
+  });
+});

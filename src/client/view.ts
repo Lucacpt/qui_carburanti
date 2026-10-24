@@ -3,6 +3,7 @@
 
 import type { Reliability } from "../domain/reliability.ts";
 import { State } from "../domain/types.ts";
+import { PULL_DEAD_ZONE_PX, PULL_TRIGGER_PX, pullProgress } from "./pull.ts";
 
 type Child = Node | string | null | undefined | false;
 type Attrs = Record<string, string | boolean | undefined | ((e: Event) => void)>;
@@ -79,4 +80,76 @@ export function openSheet(title: string): { body: HTMLElement; close: () => void
 export function announce(text: string): void {
   const live = document.getElementById("live");
   if (live) live.textContent = text;
+}
+
+/** "Tira giù per aggiornare" in cima alla pagina (src/client/pull.ts). */
+export function onPullDown(opts: {
+  indicator: HTMLElement;
+  enabled: () => boolean;
+  refresh: () => Promise<void>;
+}): void {
+  const { indicator, enabled, refresh } = opts;
+  let start: { x: number; y: number } | null = null;
+  let ready = false;
+  let busy = false;
+
+  const show = (height: number, text: string) => {
+    indicator.style.height = `${height}px`;
+    indicator.textContent = text;
+  };
+  const reset = () => {
+    start = null;
+    ready = false;
+    indicator.classList.remove("dragging");
+    show(0, "");
+  };
+
+  window.addEventListener(
+    "touchstart",
+    (e) => {
+      const t = e.touches[0];
+      if (busy || !t || e.touches.length !== 1 || window.scrollY > 0 || !enabled()) return;
+      start = { x: t.clientX, y: t.clientY };
+      indicator.classList.add("dragging");
+    },
+    { passive: true },
+  );
+
+  window.addEventListener(
+    "touchmove",
+    (e) => {
+      const t = e.touches[0];
+      if (!start || !t) return;
+      const dy = t.clientY - start.y;
+      const dx = Math.abs(t.clientX - start.x);
+      if (window.scrollY > 0 || dy < -PULL_DEAD_ZONE_PX || (dx > PULL_DEAD_ZONE_PX && dx > dy)) {
+        reset();
+        return;
+      }
+      if (dy < PULL_DEAD_ZONE_PX) return;
+      const p = pullProgress(dy);
+      ready = p.ready;
+      show(p.height, ready ? "↻ Rilascia per aggiornare" : "↓ Tira per aggiornare");
+    },
+    { passive: true },
+  );
+
+  window.addEventListener("touchend", () => {
+    if (!start) return;
+    if (!ready) {
+      reset();
+      return;
+    }
+    start = null;
+    busy = true;
+    indicator.classList.remove("dragging");
+    show(PULL_TRIGGER_PX / 2, "Aggiorno…");
+    void refresh().finally(() => {
+      busy = false;
+      reset();
+    });
+  });
+  window.addEventListener("touchcancel", () => {
+    if (!busy) reset();
+  });
 }

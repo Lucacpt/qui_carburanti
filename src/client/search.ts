@@ -1,6 +1,6 @@
 // Ricerca locale sull'anagrafica (ADR-0007): nessuna richiesta di rete, nessun geocoder.
 
-import type { Point } from "./geo.ts";
+import { nearby, type Point } from "./geo.ts";
 
 /** Un comune della provincia con il suo centro (Wikidata), anche se non ha distributori. */
 export interface Town extends Point {
@@ -59,4 +59,19 @@ export function findTown(towns: readonly Town[], query: string): Town | null {
     (best, t) => (!best || t.key.length < best.key.length ? t : best),
     null,
   );
+}
+
+/**
+ * I distributori attorno a un comune cercato, come se chi cerca fosse al suo centro: quelli entro
+ * `radiusKm` (o almeno i `min` più vicini) più tutti quelli del comune, anche se è molto esteso.
+ */
+export function townArea<T extends Point & { readonly town: string }>(
+  stations: readonly T[],
+  town: Town,
+  radiusKm: number,
+  min: number,
+): T[] {
+  const area = new Set(nearby(stations, town, radiusKm, min));
+  for (const s of stations) if (normalize(s.town) === town.key) area.add(s);
+  return [...area];
 }
