@@ -211,3 +211,26 @@ describe("tira giù per aggiornare", () => {
     expect(pullProgress(PULL_TRIGGER_PX).ready).toBe(true);
   });
 });
+
+import { secureUrl } from "./secure.ts";
+
+describe("pagina aperta in http:// (es. link senza https da Instagram)", () => {
+  const loc = (protocol: string, hostname: string) => ({
+    protocol,
+    hostname,
+    host: hostname,
+    pathname: "/d/3518",
+    search: "?v=1",
+    hash: "",
+  });
+
+  it("passa alla versione https con lo stesso indirizzo", () => {
+    expect(secureUrl(loc("http:", "quicarburanti.it"))).toBe("https://quicarburanti.it/d/3518?v=1");
+  });
+
+  it("già sicura, o sviluppo in locale: resta dov'è", () => {
+    expect(secureUrl(loc("https:", "quicarburanti.it"))).toBeNull();
+    expect(secureUrl(loc("http:", "localhost"))).toBeNull();
+    expect(secureUrl(loc("http:", "127.0.0.1"))).toBeNull();
+  });
+});
