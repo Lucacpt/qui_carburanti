@@ -12,8 +12,9 @@ const PAGES = readdirSync(new URL("../public/", import.meta.url)).filter(
   (f) => f.endsWith(".html") && f !== "404.html" && f !== "admin.html",
 );
 
+// Spazi e a capo liberi tra gli attributi: l'editor manda a capo i tag lunghi (vedi privacy.html).
 const meta = (html: string, key: string) =>
-  new RegExp(`<meta (?:property|name)="${key}" content="([^"]*)">`).exec(html)?.[1];
+  new RegExp(`<meta\\s+(?:property|name)="${key}"\\s+content="([^"]*)"\\s*/?>`).exec(html)?.[1];
 
 describe("public/og.png", () => {
   const png = read("og.png");
@@ -44,7 +45,7 @@ describe.each(PAGES)("%s", (file) => {
   });
 
   it("og:url è l'indirizzo canonico, se la pagina ne ha uno solo", () => {
-    const canonical = /<link rel="canonical" href="([^"]+)">/.exec(html)?.[1];
+    const canonical = /<link\s+rel="canonical"\s+href="([^"]+)"\s*\/?>/.exec(html)?.[1];
     if (file === "index.html") {
       // La shell dell'app serve anche /d/<id> e /dati: un og:url fisso farebbe confluire su
       // Facebook ogni scheda condivisa nella home.

@@ -72,7 +72,7 @@ async function main() {
   const og = await fetch(`${BASE}/og.png`);
   check(
     "anteprima dei link: og:image nella home e /og.png",
-    homeHtml.includes('<meta property="og:image" content="https://quicarburanti.it/og.png">') &&
+    /<meta\s+property="og:image"\s+content="https:\/\/quicarburanti\.it\/og\.png"/.test(homeHtml) &&
       og.ok &&
       og.headers.get("content-type") === "image/png" &&
       og.headers.get("cross-origin-resource-policy") === "cross-origin",
