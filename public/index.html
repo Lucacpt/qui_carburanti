@@ -3,10 +3,12 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>QUI — dove c'è carburante, adesso</title>
-  <meta name="description" content="Segnalazioni anonime dei distributori con carburante disponibile. Nessun account, nessun tracciamento.">
+  <title>Distributori con carburante in provincia di Avellino — QUI</title>
+  <meta name="description" content="Dove c'è carburante adesso in provincia di Avellino: le segnalazioni in tempo reale degli automobilisti, distributore per distributore. Gratis, senza account.">
+  <link rel="canonical" href="https://quicarburanti.it/">
   <meta name="theme-color" content="#EA580C">
   <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="/manifest.webmanifest">
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="QUI">
   <meta property="og:locale" content="it_IT">
@@ -20,20 +22,25 @@
   <meta name="twitter:card" content="summary_large_image">
   <link rel="stylesheet" href="/app.css">
   <script type="module" src="/app.js"></script>
+  <!-- Dati strutturati (docs/08-seo.md, fase 1 punto 7): solo ciò che è vero e stabile, mai lo stato. -->
+  <script type="application/ld+json">[{"@context":"https://schema.org","@type":"WebSite","name":"QUI","alternateName":"QUI carburanti","url":"https://quicarburanti.it/","inLanguage":"it"},{"@context":"https://schema.org","@type":"WebApplication","name":"QUI","url":"https://quicarburanti.it/","applicationCategory":"TravelApplication","operatingSystem":"Web","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"EUR"},"description":"Dove c'è carburante adesso in provincia di Avellino, dalle segnalazioni anonime degli automobilisti. Senza account e senza tracciamento."}]</script>
 </head>
 <body>
   <header class="top">
-    <a href="/" class="home"><img src="/icon.svg" width="40" height="40" alt=""><h1>QUI</h1></a>
+    <a href="/" class="home"><img src="/icon.svg" width="40" height="40" alt=""><span class="brand-name">QUI</span></a>
     <span class="beta">Beta</span>
   </header>
   <div id="banner" class="banner" role="status" hidden></div>
   <main id="app">
+    <h1>Distributori con carburante in provincia di Avellino</h1>
+    <p>QUI mostra dove c'è carburante adesso, dalle segnalazioni di chi è appena passato dal distributore. Gratis, senza account, senza tracciamento.</p>
     <p class="note">Caricamento dei distributori…</p>
-    <noscript><p>QUI ha bisogno di JavaScript per mostrare i distributori.</p></noscript>
+    <noscript><p>Per lo stato in tempo reale serve JavaScript. Intanto trovi i distributori nella <a href="/comuni">pagina dei comuni</a>.</p></noscript>
+    <p><a href="/comuni">Distributori per comune</a> · <a href="/come-funziona">Come funziona</a></p>
   </main>
   <footer class="foot">
     <p>Informazioni degli utenti, non verificate. Non è una fonte ufficiale. Non usare il telefono mentre guidi.</p>
-    <p><a href="/progetto">Il progetto</a> · <a href="/come-funziona">Come funziona</a> · <a href="/privacy">Privacy</a> · <a href="/termini">Termini</a> · <a href="/cookie">Niente cookie di tracciamento</a> · <a href="/dati">I tuoi dati</a> · <a href="https://github.com/Lucacpt/qui_carburanti">Codice</a></p>
+    <p><a href="/comuni">Comuni</a> · <a href="/progetto">Il progetto</a> · <a href="/come-funziona">Come funziona</a> · <a href="/privacy">Privacy</a> · <a href="/termini">Termini</a> · <a href="/cookie">Niente cookie di tracciamento</a> · <a href="/dati">I tuoi dati</a> · <a href="https://github.com/Lucacpt/qui_carburanti">Codice</a></p>
   </footer>
   <div id="live" class="sr-only" aria-live="polite"></div>
 </body>

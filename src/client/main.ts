@@ -431,6 +431,8 @@ const refreshButton = h(
 const listView = h(
   "div",
   { class: "list" },
+  // Una sola <h1> per vista (docs/08-seo.md, fase 1 punto 4): qui la leggono i lettori di schermo.
+  h("h1", { class: "sr-only" }, "Distributori con carburante in provincia di Avellino"),
   pullIndicator,
   h(
     "div",
@@ -636,7 +638,7 @@ function renderDetail(id: number): HTMLElement {
     "div",
     { class: "detail" },
     back,
-    h("h2", {}, `${st.brand} — ${st.name}`),
+    h("h1", {}, `${st.brand} — ${st.name}`),
     h("p", {}, `${st.address}, ${st.town}`),
     ui.origin
       ? h("p", { class: "muted" }, `A ${formatDistance(distanceKm(ui.origin, st))} da te`)
@@ -979,7 +981,7 @@ function renderMyData(): HTMLElement {
       { type: "button", class: "btn back", onClick: () => go("/") },
       "← Torna alla lista",
     ),
-    h("h2", {}, "I tuoi dati su questo telefono"),
+    h("h1", {}, "I tuoi dati su questo telefono"),
     h(
       "p",
       {},
@@ -1090,6 +1092,12 @@ async function refresh(): Promise<void> {
 }
 
 async function init(): Promise<void> {
+  // /?q=Grottaminarda: le pagine dei comuni aprono la lista già cercata, con i dintorni.
+  const q = new URLSearchParams(location.search).get("q")?.trim().slice(0, 80) ?? "";
+  if (q) {
+    ui.query = q;
+    (listView.querySelector("#q") as HTMLInputElement).value = q;
+  }
   // "I tuoi dati" non dipende dalla rete: si mostra subito, anche offline.
   if (location.pathname === DATA_PATH) render();
   try {

@@ -29,15 +29,15 @@
 - [x] Nessuna sitemap → `public/sitemap.xml` generata a ogni build dall'anagrafica (questa PR)
 - [x] "Soft 404": ogni indirizzo rispondeva 200 con la home → vera pagina 404 (PR `fix/errori-header`)
 - [x] Nessun canonical → statico sulle pagine informative, impostato dall'app su home e schede (questa PR)
-- [ ] Contenuto solo via JavaScript su home e schede → fase 1, punti 1-3
-- [ ] `<h1>` = logo su tutte le pagine → fase 1, punto 4
+- [x] Contenuto solo via JavaScript su home e schede → fase 1, punti 1-3
+- [x] `<h1>` = logo su tutte le pagine → fase 1, punto 4
 
 ### Avvisi
-- [ ] Title senza luogo e senza parole cercate (`index.html`: "QUI — dove c'è carburante, adesso")
+- [x] Title senza luogo e senza parole cercate → fase 1, punto 5
 - [x] Nessun Open Graph: un link condiviso su WhatsApp, il canale principale durante una crisi, non ha anteprima → fase 1, punto 6
-- [ ] Nessun dato strutturato (`GasStation`, `BreadcrumbList`, `WebSite`)
-- [ ] Nessun manifest PWA, nonostante la CSP preveda `manifest-src`
-- [ ] Redirect `www` → `quicarburanti.it` non ancora attivo (passo in `docs/procedure/rilascio.md`)
+- [x] Nessun dato strutturato → fase 1, punto 7
+- [x] Nessun manifest PWA → fase 1, punto 8
+- [x] Redirect `www` → `quicarburanti.it` (fatto il 2026-10-24)
 
 ### Cosa va già bene
 - Prestazioni da primo della classe: 18 KB alla prima visita, nessun blocco al rendering da terzi. I Core Web Vitals saranno verdi.
@@ -71,7 +71,9 @@ Non ho dati di volume: le priorità vanno verificate in **Google Search Console*
 - Vera pagina 404 con stato HTTP 404 e `noindex`.
 - Lo staging ha `X-Robots-Tag: noindex` su tutto.
 
-### Fase 1 — fondamenta tecniche (prima del lancio pubblico)
+### Fase 1 — fondamenta tecniche — fatto (2026-10-24, v0.1.7)
+*Com'è stata fatta:* `scripts/build-seo.ts` genera a ogni build `public/d/<id>.html` (230), `public/comune/<slug>.html` (92) e `public/comuni.html` dalle funzioni pure di `scripts/seo-pages.ts`, testate in `scripts/seo-pages.test.ts` (anche: **nessuna parola di stato** nell'HTML statico). Le schede caricano l'app, che sostituisce il contenuto statico con lo stato in tempo reale; un id sconosciuto riceve un 404 vero (tolta la riscrittura `/d/*`). Le pagine dei comuni rimandano alla lista con `/?q=<comune>`. Home con `<h1>`, testo e link a `/comuni`, JSON-LD `WebSite` e `WebApplication`, `manifest.webmanifest`. Il logo non è più un `<h1>` su nessuna pagina. Nota: in pre-lancio (`PUBLIC_LAUNCH` ≠ 1) le schede statiche mostrerebbero l'anagrafica, non la pagina d'attesa.
+
 1. **Schede degli impianti in HTML statico.** In build, per ogni impianto, `public/d/<id>.html` con: `<h1>` "Marchio Nome", indirizzo, comune, carburanti disponibili all'impianto (dall'anagrafica, non lo stato), pulsante "Portami qui", link al comune, fonte "Anagrafica MIMIT, licenza IODL 2.0". `app.js` aggiunge sopra lo stato in tempo reale. Va tolta la riscrittura `/d/*` da `_redirects`; gli ID sconosciuti diventano 404 veri.
 2. **Pagine dei comuni** `/comune/<slug>` (solo i 92 con almeno un impianto, per non creare pagine vuote): elenco degli impianti con link alle schede, mappa testuale degli indirizzi. Slug: minuscole, accenti tolti, spazi e apostrofi → `-` ("Sant'Angelo dei Lombardi" → `sant-angelo-dei-lombardi`).
 3. **Home con contenuto statico** sopra l'app: `<h1>` "Distributori con carburante in provincia di Avellino", due righe su cosa fa QUI, indice dei comuni (link alle pagine del punto 2). È anche ciò che leggono i crawler delle IA.
@@ -135,7 +137,7 @@ Solo contenuti che possiamo sostenere con fatti; niente testi riempitivi.
 - **Dove:** `https://quicarburanti.it/sitemap.xml`, indicata in `robots.txt`.
 - **Cosa contiene:** le pagine `/`, `/come-funziona`, `/progetto`, `/privacy`, `/termini`, `/cookie` e una voce `/d/<id>` per ciascuno dei 230 impianti, con `lastmod` uguale alla data dell'anagrafica.
 - **Come si aggiorna:** da sola. `npm run build` e ogni deploy eseguono `scripts/build-seo.ts`. Dopo `npm run import:mimit`, al deploy successivo la sitemap segue i nuovi impianti. Il file generato non è nel repository (`.gitignore`), come `app.js`.
-- **Fase 1:** quando arriveranno le pagine dei comuni, si aggiungono in `scripts/sitemap.ts`.
+- **Fase 1, fatto:** la sitemap comprende anche `/comuni` e le 92 pagine `/comune/<slug>`.
 
 ## 7. Chi fa cosa
 | Attività | Chi | Quando |
