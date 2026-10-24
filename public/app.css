@@ -181,6 +181,31 @@ input[type="text"] {
   border-color: var(--ink);
 }
 
+/* --- ricerca e filtri: una riga ciascuno, per arrivare subito alla lista --- */
+.search-row {
+  display: flex;
+  gap: 8px;
+}
+.search-row input {
+  flex: 1;
+  min-width: 0;
+}
+.search-row .btn {
+  flex: none;
+  white-space: nowrap;
+}
+.controls .chips {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.controls .chips::-webkit-scrollbar {
+  display: none;
+}
+.controls .chip {
+  flex: none;
+}
+
 /* --- lista --- */
 .summary {
   margin: 12px 0 4px;
@@ -234,6 +259,8 @@ html.ptr-on {
   padding: 0;
   margin: 0 0 12px;
   display: grid;
+  /* minmax(0, …): un indirizzo lungo su una riga non deve allargare la card oltre lo schermo. */
+  grid-template-columns: minmax(0, 1fr);
   gap: 10px;
 }
 .card {
@@ -261,6 +288,61 @@ html.ptr-on {
 .addr {
   font-size: 0.875rem;
   color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Striscia a sinistra con lo stato migliore: la lista si legge scorrendo, senza leggere. */
+.card.edge-green {
+  border-left: 6px solid var(--green);
+}
+.card.edge-amber {
+  border-left: 6px solid var(--amber);
+}
+.card.edge-red {
+  border-left: 6px solid var(--red);
+}
+.card.edge-grey {
+  border-left: 6px solid var(--line);
+}
+.pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+/* Pillole piene per gli stati con informazioni; il testo prende il colore di fondo della pagina
+   per restare leggibile anche nel tema scuro, dove verde, ambra e rosso sono chiari. */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.pill.s-green {
+  background: var(--green);
+  border-color: var(--green);
+  color: var(--bg);
+}
+.pill.s-amber {
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--bg);
+}
+.pill.s-red {
+  background: var(--red);
+  border-color: var(--red);
+  color: var(--bg);
+}
+.pill.s-grey {
+  font-weight: 500;
+  color: var(--muted);
+}
+.legend {
+  margin: 0 0 8px;
 }
 .status {
   margin-top: 6px;
@@ -299,18 +381,6 @@ html.ptr-on {
 .extras {
   color: var(--muted);
   font-size: 0.875rem;
-}
-.badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 6px;
-  font-size: 0.8rem;
-}
-.badge {
-  padding: 1px 8px;
-  border: 1px solid var(--line);
-  border-radius: 999px;
 }
 
 /* --- dettaglio --- */

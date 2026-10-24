@@ -25,6 +25,15 @@ export function ago(ms: number | null, now: number): string {
   return rest === 0 ? `${h} h fa` : `${h} h ${rest} min fa`;
 }
 
+/** Età compatta per le pillole della lista: "ora", "12′", "2 h". Vuota se non c'è un orario. */
+export function shortAge(ms: number | null, now: number): string {
+  if (ms === null) return "";
+  const min = Math.max(0, Math.floor((now - ms) / 60_000));
+  if (min < 1) return "ora";
+  if (min < 60) return `${min}′`;
+  return `${Math.floor(min / 60)} h`;
+}
+
 const TIME = new Intl.DateTimeFormat("it-IT", {
   timeZone: "Europe/Rome",
   hour: "2-digit",
