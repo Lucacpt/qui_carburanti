@@ -6,6 +6,8 @@
 
 > 🚧 **Beta, in sviluppo.** Si parte dalla provincia di Avellino. Le informazioni provengono dagli utenti e **non sono verificate**: QUI non è una fonte ufficiale.
 
+Forse l'applicazione è stata sviluppata in modo un po' eccessivo rispetto alle necessità, soprattutto dal punto di vista dell'automazione e della protezione contro chi volesse abusare del servizio, ma sono dell'idea che sia meglio esagerare con le protezioni piuttosto che rischiare di avere problemi in futuro.
+
 ## Come funziona, in breve
 1. Apri il sito e tocca **«Vicino a me»**: la posizione resta sul telefono.
 2. Guarda lo stato del carburante che ti serve:
