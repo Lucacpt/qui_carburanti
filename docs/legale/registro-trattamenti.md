@@ -2,13 +2,12 @@
 
 > Art. 30 GDPR, con valutazione del legittimo interesse, verifica DPIA e procedura per le violazioni dei dati.
 > **Versione 1 · 23 ottobre 2026** · documento pubblico, per trasparenza.
-> ⚠️ Bozza in attesa di revisione legale. Non è una consulenza legale.
 
 ## 0. Titolare e premesse
 
 | | |
 |---|---|
-| **Titolare** | [DA COMPILARE: nome e cognome], persona fisica |
+| **Titolare** | Luca Ginolfi, persona fisica |
 | **Contatto** | privacy@quicarburanti.it |
 | **DPO** | Non designato: nessun monitoraggio regolare e sistematico su larga scala e nessuna categoria particolare di dati (art. 37) |
 | **Perché questo registro** | L'esenzione per chi ha meno di 250 dipendenti (art. 30, par. 5) non si applica, perché il trattamento non è occasionale |
@@ -31,7 +30,7 @@ I tempi di conservazione citati qui e nell'informativa coincidono con le costant
 - **Finalità:** calcolare lo stato dei distributori; impedire che una sola persona o rete determini lo stato.
 - **Base giuridica:** legittimo interesse (art. 6.1.f), vedi §3.
 - **Interessati:** chi invia una segnalazione.
-- **Dati:** impianto, carburante, presenza o assenza, "sul posto" (booleano calcolato sul dispositivo), coda e limite facoltativi, ora; `rkey` = HMAC-SHA-256(chiave del giorno, prefisso IP ‖ token) e `pkey` = HMAC-SHA-256(chiave del giorno, prefisso IP), troncati a 128 bit. Prefisso: IPv4 intero, IPv6 /64. **L'IP non viene memorizzato.**
+- **Dati:** impianto, carburante, presenza o assenza, "sul posto" (booleano calcolato sul dispositivo), coda e limite facoltativi, ora; `rkey` = HMAC-SHA-256(chiave del giorno, prefisso IP ‖ token) e `pkey` = HMAC-SHA-256(chiave del giorno, prefisso IP), troncati a 128 bit. Prefisso: IPv4 intero, IPv6 /56. **L'IP non viene memorizzato.**
 - **Destinatari:** Cloudflare (Durable Objects, giurisdizione UE).
 - **Conservazione:** 8 ore (`DEFAULT_PARAMS.windowMs`), poi cancellazione automatica. La chiave del giorno viene cancellata a mezzanotte UTC. Le copie tecniche di Cloudflare (point-in-time recovery) restano fino a 30 giorni.
 - **Note:** dati pseudonimizzati, quindi personali (cons. 26). Il token è casuale (128 bit), nasce sul dispositivo solo alla prima segnalazione del giorno e non è ricostruibile dal server.

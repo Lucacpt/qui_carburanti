@@ -6,7 +6,7 @@
 
 import { type SpawnSyncOptions, spawnSync } from "node:child_process";
 import { randomBytes } from "node:crypto";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { isWorkerMissing } from "./wrangler-errors.ts";
@@ -68,9 +68,21 @@ if (!hasPowSecret()) {
   console.log(`${target}: primo deploy, POW_SECRET generato e caricato come secret del Worker.`);
 }
 
+// Prima del lancio la produzione mostra public/presto.html al posto della lista (index.html serve
+// anche /d/<id> e /dati). API, area admin e pagine informative restano attive. Si lancia mettendo
+// PUBLIC_LAUNCH=1 tra le variabili dell'environment GitHub "production" (docs/procedure/rilascio.md).
+const INDEX = new URL("../public/index.html", import.meta.url);
+const prelaunch = target === "production" && process.env.PUBLIC_LAUNCH !== "1";
+const app = readFileSync(INDEX, "utf8");
+if (prelaunch) {
+  writeFileSync(INDEX, readFileSync(new URL("../public/presto.html", import.meta.url), "utf8"));
+  console.log("production: prima del lancio, la home è la pagina d'attesa (PUBLIC_LAUNCH ≠ 1).");
+}
+
 try {
   const r = wrangler(args, { stdio: "inherit" });
   if (r.status !== 0) process.exitCode = r.status ?? 1;
 } finally {
   if (dir) rmSync(dir, { recursive: true, force: true });
+  if (prelaunch) writeFileSync(INDEX, app);
 }
