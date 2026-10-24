@@ -2,9 +2,52 @@ import { describe, expect, it } from "vitest";
 import type { ProvinceRegistry } from "../domain/mimit.ts";
 import { FUEL_BIT } from "../domain/mimit.ts";
 import { fuelsFromMask, stationsFromRegistry } from "./data.ts";
-import { centroid, distanceKm, formatDistance } from "./geo.ts";
+import { centroid, distanceKm, formatDistance, nearby } from "./geo.ts";
+
+describe("nearby: distributori attorno a un comune", () => {
+  const p = { lat: 41, lon: 15 };
+  // ~1,1 km per 0,01° di latitudine
+  const at = (name: string, dLat: number) => ({ name, lat: 41 + dLat, lon: 15 });
+  const items = [at("40km", 0.36), at("2km", 0.018), at("9km", 0.081), at("14km", 0.126)];
+
+  it("entro il raggio, ordinati per distanza; fuori i lontani", () => {
+    expect(nearby(items, p, 15, 2).map((x) => x.name)).toEqual(["2km", "9km", "14km"]);
+  });
+
+  it("se nel raggio ce ne sono troppo pochi, prende comunque i più vicini", () => {
+    expect(nearby(items, p, 5, 3).map((x) => x.name)).toEqual(["2km", "9km", "14km"]);
+    expect(nearby(items, p, 1, 1).map((x) => x.name)).toEqual(["2km"]);
+  });
+});
+
 import { directionsUrl, parseStationPath, stationPath } from "./nav.ts";
-import { matches, normalize } from "./search.ts";
+import { findTown, matches, normalize, type Town } from "./search.ts";
+
+describe("findTown: comuni senza distributori", () => {
+  const town = (name: string): Town => ({ name, key: normalize(name), lat: 41, lon: 15 });
+  const towns = [
+    town("Chiusano di San Domenico"),
+    town("San Mango sul Calore"),
+    town("San Nicola Baronia"),
+    town("Sant'Angelo dei Lombardi"),
+    town("Ospedaletto d'Alpinolo"),
+  ];
+
+  it("trova il comune anche con una parte del nome, senza accenti né maiuscole", () => {
+    expect(findTown(towns, "chius")?.name).toBe("Chiusano di San Domenico");
+    expect(findTown(towns, "OSPEDALETTO")?.name).toBe("Ospedaletto d'Alpinolo");
+    expect(findTown(towns, "sant angelo")?.name).toBe("Sant'Angelo dei Lombardi");
+  });
+
+  it("con più comuni possibili sceglie il nome più corto, il più probabile", () => {
+    expect(findTown(towns, "san")?.name).toBe("San Nicola Baronia");
+  });
+
+  it("niente comune per una ricerca vuota o senza corrispondenze", () => {
+    expect(findTown(towns, "  ")).toBeNull();
+    expect(findTown(towns, "napoli")).toBeNull();
+  });
+});
 
 describe("ricerca locale", () => {
   it("normalizza accenti, maiuscole e abbreviazioni MIMIT", () => {

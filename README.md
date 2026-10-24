@@ -46,7 +46,7 @@ La maggior parte dei miei repository è privata: questo è uno dei pochi pubblic
 | Linguaggio | TypeScript 7 con `erasableSyntaxOnly`; Node.js 24 esegue i `.ts` direttamente | Nessun passo di build per script e test |
 | Qualità | **Vitest** (con `node:sqlite`, lo stesso motore dei Durable Objects), **Biome** per lint e formattazione | La logica del database si testa senza Cloudflare |
 | CI/CD | **GitHub Actions** con Actions bloccate per SHA, harden-runner, **CodeQL**, dependency review, **Dependabot** con 7 giorni di attesa | Catena di fornitura difesa; `main` protetto, solo PR |
-| Dati esterni | Anagrafica impianti del **MIMIT** (licenza IODL 2.0) | Elenco ufficiale dei distributori |
+| Dati esterni | Anagrafica impianti del **MIMIT** (licenza IODL 2.0); coordinate dei comuni da **Wikidata** (CC0) | Elenco ufficiale dei distributori; distributori più vicini anche ai comuni che non ne hanno |
 
 Versioni bloccate in [`package.json`](package.json): TypeScript 7.0.2, Wrangler 4.151.0, Vitest 5.0.5, Biome 2.5.15, esbuild 0.28.2.
 
@@ -109,7 +109,7 @@ Tutto il design è in [`docs/`](docs/README.md). Per orientarsi conviene partire
 Codice: [EUPL-1.2](LICENSE) ([testo ufficiale in italiano](https://eur-lex.europa.eu/legal-content/IT/TXT/?uri=CELEX:32017D0863)).
 Cosa comporta: puoi usare, studiare, modificare e ridistribuire il codice. Se distribuisci o **offri come servizio web** una versione modificata, devi renderne pubblico il codice sotto la stessa licenza (o una compatibile).
 
-Dati: anagrafica impianti © MIMIT, licenza IODL 2.0. Nome e icona "QUI": vedi [TRADEMARK.md](TRADEMARK.md).
+Dati: anagrafica impianti © MIMIT, licenza IODL 2.0; coordinate dei comuni: Wikidata, CC0. Nome e icona "QUI": vedi [TRADEMARK.md](TRADEMARK.md).
 
 ## Sicurezza
 Hai trovato una vulnerabilità? Leggi [SECURITY.md](SECURITY.md) e **non aprire una issue pubblica**.

@@ -23,6 +23,23 @@ export function formatDistance(km: number): string {
   return `${km < 10 ? km.toFixed(1).replace(".", ",") : Math.round(km)} km`;
 }
 
+/**
+ * I punti entro `maxKm` da `p`, o almeno i `min` più vicini se entro quel raggio ce ne sono meno
+ * (es. i distributori attorno a un comune che non ne ha). Ordinati per distanza.
+ */
+export function nearby<T extends Point>(
+  items: readonly T[],
+  p: Point,
+  maxKm: number,
+  min: number,
+): T[] {
+  const byDistance = items
+    .map((item) => ({ item, km: distanceKm(p, item) }))
+    .sort((a, b) => a.km - b.km);
+  const within = byDistance.filter((x) => x.km <= maxKm);
+  return (within.length >= min ? within : byDistance.slice(0, min)).map((x) => x.item);
+}
+
 /** Centro medio di un insieme di punti (es. i distributori di un comune). */
 export function centroid(points: readonly Point[]): Point | null {
   if (points.length === 0) return null;
