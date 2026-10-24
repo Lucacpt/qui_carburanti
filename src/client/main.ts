@@ -38,6 +38,7 @@ import {
   REPORT_REMOTE_HELP,
   withTimeout,
 } from "./position.ts";
+import { PULL_RESULT_MS } from "./pull.ts";
 import { findTown, matches, normalize, searchSuggestions, type Town, townArea } from "./search.ts";
 import { secureUrl } from "./secure.ts";
 import { announce, h, onPullDown, openSheet, reliabilityBadge, STATE_UI } from "./view.ts";
@@ -423,7 +424,7 @@ const refreshButton = h(
     class: "icon-btn",
     "aria-label": "Aggiorna la lista",
     title: "Aggiorna la lista",
-    onClick: () => void refreshList(),
+    onClick: () => void refreshFromButton(),
   },
   "↻",
 );
@@ -481,8 +482,20 @@ const listView = h(
   more,
 );
 
+/** Il pulsante ↻ mostra l'esito: verde se la lista è stata riletta, rosso se no. */
+async function refreshFromButton(): Promise<void> {
+  refreshButton.classList.remove("done", "fail");
+  const ok = await refreshList();
+  refreshButton.classList.add(ok ? "done" : "fail");
+  refreshButton.textContent = ok ? "✓" : "↻";
+  window.setTimeout(() => {
+    refreshButton.classList.remove("done", "fail");
+    refreshButton.textContent = "↻";
+  }, PULL_RESULT_MS);
+}
+
 /** Stato dei distributori e, se attiva, posizione appena letta: per chi si sposta con la lista aperta. */
-async function refreshList(): Promise<void> {
+async function refreshList(): Promise<boolean> {
   refreshButton.disabled = true;
   const moved = ui.origin
     ? getPosition(false, 5_000).then(
@@ -494,10 +507,11 @@ async function refreshList(): Promise<void> {
         },
       )
     : Promise.resolve();
-  await Promise.all([refresh(), moved]);
+  const [ok] = await Promise.all([refresh(), moved]);
   updateResults();
   refreshButton.disabled = false;
-  announce("Lista aggiornata");
+  announce(ok ? "Lista aggiornata" : "Aggiornamento non riuscito");
+  return ok;
 }
 
 async function usePosition(): Promise<void> {
@@ -700,7 +714,11 @@ function renderDetail(id: number): HTMLElement {
 // ------------------------------------------------------------------ segnalazione
 
 function openReport(st: Station, fuel: Fuel, has: boolean): void {
-  const sheet = openSheet(`${has ? "C'è" : "Non c'è"} ${FUEL_NAMES[fuel]}`);
+  let sent = false;
+  // Chiuso il pannello dopo l'invio, la lista si rilegge subito: chi segnala vede l'effetto.
+  const sheet = openSheet(`${has ? "C'è" : "Non c'è"} ${FUEL_NAMES[fuel]}`, () => {
+    if (sent) void refresh();
+  });
   const step = (...nodes: Array<Node | string>) => sheet.body.replaceChildren(...nodes);
   let near = false;
 
@@ -722,6 +740,7 @@ function openReport(st: Station, fuel: Fuel, has: boolean): void {
       );
       return;
     }
+    sent = true;
     const n = incrementHelped();
     announce("Segnalazione inviata, grazie");
     step(
@@ -1079,7 +1098,8 @@ function renderBanner(): void {
   banner.hidden = !text;
 }
 
-async function refresh(): Promise<void> {
+/** true se lo stato è stato riletto dal server. */
+async function refresh(): Promise<boolean> {
   try {
     ui.snap = await loadSnapshot(PROV);
     ui.snapAt = Date.now();
@@ -1089,6 +1109,7 @@ async function refresh(): Promise<void> {
   }
   // Non ridisegnare il dettaglio mentre l'utente sta segnalando.
   if (!document.querySelector(".overlay")) render();
+  return !ui.snapError;
 }
 
 async function init(): Promise<void> {

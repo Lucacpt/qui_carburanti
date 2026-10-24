@@ -73,6 +73,7 @@ ${s.app ? '  <script type="module" src="/app.js"></script>\n' : ""}  ${jsonLd(s.
 <body>
   <header class="top">
     <a href="/" class="home"><img src="/icon.svg" width="40" height="40" alt=""><span class="brand-name">QUI</span></a>
+    <span class="beta">Beta</span>
   </header>
 ${s.app ? '  <div id="banner" class="banner" role="status" hidden></div>\n' : ""}  <main id="app" class="page">
 ${s.body}

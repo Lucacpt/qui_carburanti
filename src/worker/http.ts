@@ -45,6 +45,22 @@ export function etagMatches(ifNoneMatch: string | null, etag: string | null): bo
   return ifNoneMatch.split(",").some((tag) => opaque(tag) === target);
 }
 
+/** Cache di Cloudflare (per data center): breve, protegge il Durable Object dai picchi. */
+export const SNAPSHOT_EDGE_CACHE = "public, max-age=30";
+/** Browser: ricontrolla sempre con l'ETag (304 senza corpo se non è cambiato niente). */
+export const SNAPSHOT_BROWSER_CACHE = "no-cache";
+
+/**
+ * La risposta letta da caches.default torna con il "Browser Cache TTL" della zona (4 h) al posto
+ * del nostro max-age: produzione, 2026-10-24, liste ferme per ore nei browser, nella PWA e in
+ * Instagram. Prima di mandarla al browser si riscrive Cache-Control.
+ */
+export function forBrowser(res: Response, status = res.status): Response {
+  const headers = new Headers(res.headers);
+  headers.set("Cache-Control", SNAPSHOT_BROWSER_CACHE);
+  return new Response(status === 304 ? null : res.body, { status, headers });
+}
+
 export async function readJson(request: Request, maxBytes = MAX_BODY_BYTES): Promise<unknown> {
   const text = await request.text();
   if (text.length > maxBytes) throw new HttpError(413, "richiesta troppo grande");

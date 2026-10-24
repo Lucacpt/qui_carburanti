@@ -3,7 +3,7 @@
 
 import type { Reliability } from "../domain/reliability.ts";
 import { State } from "../domain/types.ts";
-import { PULL_DEAD_ZONE_PX, PULL_TRIGGER_PX, pullProgress } from "./pull.ts";
+import { PULL_DEAD_ZONE_PX, PULL_RESULT_MS, PULL_TRIGGER_PX, pullProgress } from "./pull.ts";
 
 type Child = Node | string | null | undefined | false;
 type Attrs = Record<string, string | boolean | undefined | ((e: Event) => void)>;
@@ -45,11 +45,15 @@ export function reliabilityBadge(r: Reliability): HTMLElement | null {
 }
 
 /** Pannello in sovrimpressione (al posto di <dialog>, non supportato da iOS 15.0-15.3). */
-export function openSheet(title: string): { body: HTMLElement; close: () => void } {
+export function openSheet(
+  title: string,
+  onClose?: () => void,
+): { body: HTMLElement; close: () => void } {
   const body = h("div", { class: "sheet-body" });
   const close = () => {
     overlay.remove();
     document.removeEventListener("keydown", onKey);
+    onClose?.();
   };
   const onKey = (e: Event) => {
     if ((e as KeyboardEvent).key === "Escape") close();
@@ -86,7 +90,8 @@ export function announce(text: string): void {
 export function onPullDown(opts: {
   indicator: HTMLElement;
   enabled: () => boolean;
-  refresh: () => Promise<void>;
+  /** true se la lista è stata riletta davvero: l'esito resta visibile un attimo nella banda. */
+  refresh: () => Promise<boolean>;
 }): void {
   const { indicator, enabled, refresh } = opts;
   let start: { x: number; y: number } | null = null;
@@ -100,7 +105,7 @@ export function onPullDown(opts: {
   const reset = () => {
     start = null;
     ready = false;
-    indicator.classList.remove("dragging");
+    indicator.classList.remove("dragging", "done", "fail");
     show(0, "");
   };
 
@@ -144,10 +149,16 @@ export function onPullDown(opts: {
     busy = true;
     indicator.classList.remove("dragging");
     show(PULL_TRIGGER_PX / 2, "Aggiorno…");
-    void refresh().finally(() => {
-      busy = false;
-      reset();
-    });
+    void refresh()
+      .catch(() => false)
+      .then((ok) => {
+        indicator.classList.add(ok ? "done" : "fail");
+        show(PULL_TRIGGER_PX / 2, ok ? "✓ Lista aggiornata" : "Aggiornamento non riuscito");
+        window.setTimeout(() => {
+          busy = false;
+          reset();
+        }, PULL_RESULT_MS);
+      });
   });
   window.addEventListener("touchcancel", () => {
     if (!busy) reset();
