@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ago, clock, describeState } from "./labels.ts";
+import { ago, clock, describeState, shortAge } from "./labels.ts";
 import { Flag, State, type StateResult } from "./types.ts";
 
 const NOW = Date.UTC(2026, 9, 22, 12, 0, 0);
@@ -26,6 +26,16 @@ describe("ago", () => {
     [135, "2 h 15 min fa"],
   ])("%i minuti → %s", (m, text) => {
     expect(ago(min(m), NOW)).toBe(text);
+  });
+});
+
+describe("shortAge", () => {
+  it("compatta per la lista: ora, minuti con l'apice, ore intere", () => {
+    expect(shortAge(null, NOW)).toBe("");
+    expect(shortAge(min(0), NOW)).toBe("ora");
+    expect(shortAge(min(12), NOW)).toBe("12′");
+    expect(shortAge(min(59), NOW)).toBe("59′");
+    expect(shortAge(min(135), NOW)).toBe("2 h");
   });
 });
 

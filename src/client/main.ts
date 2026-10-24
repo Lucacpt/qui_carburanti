@@ -1,6 +1,6 @@
 // Interfaccia di QUI: lista, ricerca, dettaglio, segnalazione, contestazione (RAD §3.2).
 
-import { describeState, OPERATOR_LINK_TEXT } from "../domain/labels.ts";
+import { describeState, OPERATOR_LINK_TEXT, shortAge } from "../domain/labels.ts";
 import type { Reliability } from "../domain/reliability.ts";
 import { rowToResult } from "../domain/snapshot.ts";
 import { FUELS, type Fuel, type Queue, State, type StateResult } from "../domain/types.ts";
@@ -233,25 +233,46 @@ function statusLine(fuel: Fuel, s: FuelStatus): HTMLElement {
   );
 }
 
-function fuelBadges(st: Station): HTMLElement {
+/**
+ * Le pillole dei carburanti nella lista: forma, colore ed età a colpo d'occhio. La frase intera
+ * ("Disponibile secondo gli utenti · 3 conferme…") resta per i lettori di schermo e nella scheda.
+ */
+function fuelPills(st: Station): HTMLElement {
+  const fuels = ui.fuel === "all" ? st.fuels : st.fuels.filter((f) => f === ui.fuel);
   return h(
     "div",
-    { class: "badges" },
-    ...st.fuels.map((f) => {
-      const s = STATE_UI[statusOf(st.id, f).result.state];
-      return h("span", { class: `badge ${s.cls}` }, `${s.shape} ${FUEL_NAMES[f]}`);
+    { class: "pills" },
+    ...fuels.map((f) => {
+      const s = statusOf(st.id, f);
+      const r = s.result;
+      const look = STATE_UI[r.state];
+      const label = describeState(r, now(), s.lastGreenMs);
+      const age = shortAge(r.absences > 0 ? r.lastAbsenceMs : r.lastConfirmMs, now());
+      return h(
+        "span",
+        { class: `pill ${look.cls}` },
+        h(
+          "span",
+          { "aria-hidden": "true" },
+          `${look.shape} ${FUEL_NAMES[f]}${age ? ` · ${age}` : ""}`,
+        ),
+        h("span", { class: "sr-only" }, `${FUEL_NAMES[f]}: ${label.title}, ${label.detail}.`),
+      );
     }),
   );
 }
 
 function card(st: Station, best: { fuel: Fuel; status: FuelStatus }, dist: number | null) {
+  const closed = isClosed(st.id);
+  const edge = closed ? "red" : STATE_UI[best.status.result.state].cls.slice(2);
+  const more = closed ? "" : extras(best.status);
   return h(
     "li",
     {},
     h(
       "a",
       {
-        class: "card",
+        class: `card edge-${edge}`,
         href: stationPath(st.id),
         onClick: (e) => {
           e.preventDefault();
@@ -270,10 +291,10 @@ function card(st: Station, best: { fuel: Fuel; status: FuelStatus }, dist: numbe
         dist !== null ? h("span", { class: "dist" }, formatDistance(dist)) : null,
       ),
       h("div", { class: "addr" }, `${st.address}, ${st.town}`),
-      isClosed(st.id)
-        ? h("div", { class: "status s-red" }, h("strong", {}, "✕ Chiuso secondo QUI"))
-        : statusLine(best.fuel, best.status),
-      ui.fuel === "all" && st.fuels.length > 1 && !isClosed(st.id) ? fuelBadges(st) : null,
+      closed
+        ? h("div", { class: "pills" }, h("span", { class: "pill s-red" }, "✕ Chiuso secondo QUI"))
+        : fuelPills(st),
+      more ? h("div", { class: "extras" }, more) : null,
     ),
   );
 }
@@ -330,7 +351,21 @@ const summary = h("p", { class: "muted summary", "aria-live": "polite" });
 const invite = h(
   "p",
   { class: "note-box", hidden: true },
-  "In questo momento arrivano poche segnalazioni: lo stato si aggiorna appena qualcuno passa. Sei a un distributore? Aprilo e tocca «C'è» o «Non c'è»: aiuti chi cerca.",
+  "Poche segnalazioni adesso. Sei a un distributore? Aprilo e tocca «C'è» o «Non c'è».",
+);
+/** Una riga sola per leggere le pillole: le forme non dipendono dal colore (daltonismo). */
+const legend = h(
+  "p",
+  { class: "legend small muted" },
+  "Segnalazioni: ",
+  h("span", { class: "s-green" }, "●"),
+  " c'è · ",
+  h("span", { class: "s-amber" }, "▲"),
+  " da verificare · ",
+  h("span", { class: "s-red" }, "✕"),
+  " esaurito · ",
+  h("span", { class: "s-grey" }, "○"),
+  " nessuna",
 );
 /** Il comune cercato e i dintorni non hanno informazioni: allarga ai più vicini che ne hanno. */
 const expandButton = h(
@@ -374,7 +409,7 @@ const more = h(
 const posButton = h(
   "button",
   { type: "button", class: "btn", onClick: () => void usePosition() },
-  "📍 Usa la mia posizione",
+  "📍 Vicino a me",
 );
 /** Cosa fare quando la posizione non arriva (es. dentro Instagram): visibile, non solo letto. */
 const posHelp = h("p", { class: "note-box", hidden: true });
@@ -401,26 +436,30 @@ const listView = h(
     "div",
     { class: "controls" },
     h("label", { for: "q", class: "sr-only" }, "Cerca comune, via o marchio"),
-    h("input", {
-      id: "q",
-      type: "search",
-      placeholder: "Cerca comune, via o marchio",
-      autocomplete: "off",
-      enterkeyhint: "search",
-      list: "q-suggest",
-      onFocus: () => {
-        void loadTownsOnce();
-        fillSuggestions();
-      },
-      onInput: (e) => {
-        ui.query = (e.target as HTMLInputElement).value;
-        ui.limit = PAGE;
-        ui.expand = false;
-        updateResults();
-      },
-    }),
+    h(
+      "div",
+      { class: "search-row" },
+      h("input", {
+        id: "q",
+        type: "search",
+        placeholder: "Cerca comune, via o marchio",
+        autocomplete: "off",
+        enterkeyhint: "search",
+        list: "q-suggest",
+        onFocus: () => {
+          void loadTownsOnce();
+          fillSuggestions();
+        },
+        onInput: (e) => {
+          ui.query = (e.target as HTMLInputElement).value;
+          ui.limit = PAGE;
+          ui.expand = false;
+          updateResults();
+        },
+      }),
+      posButton,
+    ),
     suggestions,
-    posButton,
     posHelp,
     chips<FuelFilter>(
       [["all", "Tutti"], ...FUELS.map((f): [FuelFilter, string] => [f, FUEL_NAMES[f]])],
@@ -434,6 +473,7 @@ const listView = h(
   ),
   h("div", { class: "summary-row" }, summary, refreshButton),
   expandButton,
+  legend,
   invite,
   results,
   more,
@@ -459,7 +499,7 @@ async function refreshList(): Promise<void> {
 }
 
 async function usePosition(): Promise<void> {
-  posButton.textContent = "Cerco la posizione…";
+  posButton.textContent = "📍 Cerco…";
   posHelp.hidden = true;
   const slow = setTimeout(() => {
     posHelp.textContent = POSITION_HELP.slow;
@@ -468,12 +508,12 @@ async function usePosition(): Promise<void> {
   try {
     ui.origin = await getPosition(false);
     posHelp.hidden = true;
-    posButton.textContent = "📍 Ordinati per distanza da te";
+    posButton.textContent = "📍 Vicino a te ✓";
     announce("Distributori ordinati per distanza");
   } catch (err) {
     posHelp.textContent = positionHelp(err);
     posHelp.hidden = false;
-    posButton.textContent = "📍 Usa la mia posizione";
+    posButton.textContent = "📍 Vicino a me";
     announce(posHelp.textContent);
   } finally {
     clearTimeout(slow);
@@ -485,7 +525,7 @@ function updateResults(): void {
   const { town, list: all } = sortedResults();
   const green = all.filter((x) => x.best.status.result.state === State.GREEN).length;
   const lastHour = ui.snap?.lastHour;
-  const greenText = green > 0 ? ` · ${green} con carburante segnalato` : "";
+  const greenText = green > 0 ? ` · ${green} con carburante` : "";
   const withInfo = all.filter((x) => x.best.status.result.state !== State.GREY).length;
   if (town && ui.expand) {
     summary.textContent =
@@ -514,10 +554,10 @@ function updateResults(): void {
       greenText +
       (lastHour === undefined
         ? ""
-        : ` · ${lastHour === 1 ? "1 segnalazione" : `${lastHour} segnalazioni`} nell'ultima ora in provincia`) +
-      (ui.origin || ui.query ? "" : " · cerca il tuo comune o usa la posizione");
+        : ` · ${lastHour === 1 ? "1 segnalazione" : `${lastHour} segnalazioni`} nell'ultima ora`);
   }
   invite.hidden = !ui.snap || green > 0 || all.length === 0;
+  legend.hidden = all.length === 0;
   expandButton.hidden =
     !town || ui.expand || all.length === 0 || withInfo > 0 || !ui.stations.some(hasInfo);
   results.replaceChildren(
@@ -601,6 +641,8 @@ function renderDetail(id: number): HTMLElement {
     ui.origin
       ? h("p", { class: "muted" }, `A ${formatDistance(distanceKm(ui.origin, st))} da te`)
       : null,
+    // Per chi guida l'azione principale è arrivarci: in alto, prima degli stati.
+    navLinks(st),
     note ? h("p", { class: "note-box" }, `ℹ ${note}`) : null,
     closedNote ? h("p", { class: "note-box" }, `⚠ Chiuso secondo QUI: ${closedNote}`) : null,
     ...statuses.map(({ fuel, status }) =>
@@ -632,7 +674,6 @@ function renderDetail(id: number): HTMLElement {
       { class: "muted small" },
       "🚗 Non usare il telefono mentre guidi: fai segnalare a chi è con te.",
     ),
-    navLinks(st),
     h("button", { type: "button", class: "btn", onClick: () => void share(st) }, "Condividi"),
     // Sempre visibile, anche in sola lettura (ADR-0011, rev. 2026-10-23): il gestore può dover
     // correggere un "Disponibile" sbagliato, un impianto chiuso o i dati dell'anagrafica.
