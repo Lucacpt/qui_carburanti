@@ -2,4 +2,6 @@
 # inesistente riceve 404.html con stato HTTP 404 (not_found_handling in wrangler.jsonc).
 # Le regole esatte prima di quelle con *: wrangler le valuta più in fretta.
 /dati  /  200
+# llm.txt non è uno standard: chi lo cerca con quel nome trova llms.txt (llmstxt.org).
+/llm.txt  /llms.txt  301
 /d/*   /  200
