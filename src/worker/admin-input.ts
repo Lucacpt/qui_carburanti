@@ -98,24 +98,56 @@ export function parseAdminAction(
       };
     case "freeze": {
       if (!isId(o.station)) return fail("impianto non valido");
-      if (typeof o.hours !== "number" || !Number.isInteger(o.hours) || o.hours < 1) {
-        return fail("durata non valida");
-      }
+      if (!isHours(o.hours, Number.MAX_SAFE_INTEGER)) return fail("durata non valida");
       if (o.hours > MAX_FREEZE_HOURS) return fail(`al massimo ${MAX_FREEZE_HOURS} ore`);
-      // La nota si mostra a tutti nella scheda: niente caratteri di controllo, lunghezza limitata.
-      const note =
-        typeof o.note === "string"
-          ? // biome-ignore lint/suspicious/noControlCharactersInRegex: è proprio ciò che vogliamo rimuovere
-            o.note.replace(/[\u0000-\u001f\u007f]/g, " ").trim()
-          : "";
-      if (note.length < 3 || note.length > MAX_NOTE) return fail("nota da 3 a 200 caratteri");
+      // La nota si mostra a tutti nella scheda.
+      const note = cleanNote(o.note);
+      if (note === null) return fail("nota da 3 a 200 caratteri");
       return { ok: true, value: { prov, cmd: { kind, station: o.station, note, hours: o.hours } } };
     }
     case "unfreeze":
+    case "clearState":
       if (!isId(o.station)) return fail("impianto non valido");
       return { ok: true, value: { prov, cmd: { kind, station: o.station } } };
     case "readOnly":
       if (typeof o.on !== "boolean") return fail("valore non valido");
       return { ok: true, value: { prov, cmd: { kind, on: o.on } } };
+    case "annul": {
+      if (
+        !Array.isArray(o.ids) ||
+        o.ids.length === 0 ||
+        o.ids.length > MAX_ANNUL ||
+        !o.ids.every(isId)
+      ) {
+        return fail("ids non validi");
+      }
+      // La motivazione resta nel registro delle azioni (termini, punto 6).
+      const reason = cleanNote(o.reason);
+      if (reason === null) return fail("motivazione da 3 a 200 caratteri");
+      return { ok: true, value: { prov, cmd: { kind, ids: o.ids as number[], reason } } };
+    }
+    case "setState": {
+      if (!isId(o.station)) return fail("impianto non valido");
+      if (o.fuel !== null && !FUELS.includes(o.fuel as Fuel)) return fail("carburante non valido");
+      if (o.state !== "green" && o.state !== "red") return fail("stato non valido");
+      if (!isHours(o.hours, MAX_STATE_HOURS)) return fail(`da 1 a ${MAX_STATE_HOURS} ore`);
+      // La nota dice la fonte ed è mostrata a tutti nella scheda.
+      const note = cleanNote(o.note);
+      if (note === null) return fail("nota da 3 a 200 caratteri");
+      return {
+        ok: true,
+        value: {
+          prov,
+          cmd: {
+            kind,
+            station: o.station,
+            fuel: o.fuel as Fuel | null,
+            state: o.state,
+            note,
+            hours: o.hours,
+          },
+        },
+      };
+    }
   }
 }

@@ -9,6 +9,7 @@ import { buildSnapshot, type SnapshotEntry } from "../../domain/snapshot.ts";
 import { computeState } from "../../domain/state.ts";
 import {
   Flag,
+  FUELS,
   type Fuel,
   type Queue,
   type Report,
@@ -85,6 +86,10 @@ const SCHEMA = [
   // ADR-0013: registro delle azioni admin. Nessun dato degli utenti, solo cosa è stato deciso.
   `CREATE TABLE IF NOT EXISTS admin_log (id INTEGER PRIMARY KEY, ts INTEGER NOT NULL,
      action TEXT NOT NULL, station INTEGER, detail TEXT)`,
+  // ADR-0013 rev. 2: indicazioni di QUI, con la nota che ne dice la fonte. Al massimo 8 ore.
+  `CREATE TABLE IF NOT EXISTS overrides (station INTEGER NOT NULL, fuel TEXT NOT NULL,
+     state INTEGER NOT NULL, note TEXT NOT NULL, ts INTEGER NOT NULL, until INTEGER NOT NULL,
+     PRIMARY KEY (station, fuel))`,
 ];
 
 export interface AdminOverview {
@@ -108,6 +113,7 @@ export interface AdminOverview {
     status: string;
   }>;
   readonly frozen: Array<{ station: number; until: number; note: string }>;
+  readonly overrides: Array<Override & { until: number }>;
   readonly stats: Array<{ hour: number; fuel: string; pos: number; neg: number; dropped: number }>;
   readonly log: Array<{
     ts: number;
@@ -115,6 +121,32 @@ export interface AdminOverview {
     station: number | null;
     detail: string | null;
   }>;
+}
+
+/** Indicazione di QUI su un carburante di un impianto. */
+export type Override = {
+  readonly station: number;
+  readonly fuel: string;
+  readonly state: number;
+  readonly note: string;
+  readonly ts: number;
+};
+
+/**
+ * Una segnalazione delle ultime 8 ore come la vede l'admin. Nessun codice dei segnalatori: `net` è
+ * un'abbreviazione di 4 caratteri del codice di rete (che cambia ogni giorno), quanto basta per
+ * riconoscere una serie dalla stessa rete e annullarla.
+ */
+export interface RecentReport {
+  readonly id: number;
+  readonly ts: number;
+  readonly station: number;
+  readonly fuel: string;
+  readonly has: number;
+  readonly near: number;
+  readonly queue: number | null;
+  readonly lim: number | null;
+  readonly net: string;
 }
 
 export interface StationHistory {
@@ -130,6 +162,7 @@ export interface StationHistory {
   }>;
   readonly contests: AdminOverview["contests"];
   readonly frozen: { until: number; note: string } | null;
+  readonly overrides: Array<Override & { until: number }>;
 }
 
 /** Segnalazione già validata, con PoW verificato e chiavi anonime calcolate dal Worker. */
@@ -154,7 +187,19 @@ export interface SnapshotBody {
   readonly etag: string;
 }
 
-type Cause = "report" | "hold" | "ttl" | "window" | "fresh" | "time" | "freeze" | "unfreeze";
+type Cause =
+  | "report"
+  | "hold"
+  | "ttl"
+  | "window"
+  | "fresh"
+  | "time"
+  | "freeze"
+  | "unfreeze"
+  | "annul"
+  | "official"
+  | "clear"
+  | "users";
 
 interface ReportRow extends Record<string, SqlValue> {
   has: number;
@@ -262,6 +307,7 @@ export class ProvinceStore {
     );
     this.stat(r.fuel, now, r.has ? "pos" : "neg");
     this.updateState(r.id, r.fuel, now, "report");
+    this.yieldOverride(r.id, r.fuel, now);
     this.cache = undefined;
     return "accepted";
   }
@@ -281,9 +327,19 @@ export class ProvinceStore {
       )
       .toArray();
     const frozen = this.frozenNotes(now);
+    const overrides = this.activeOverrides(now);
+    const official = new Map(overrides.map((o) => [`${o.station}:${o.fuel}`, o]));
+    // Un'indicazione di QUI si mostra anche dove nessuno ha segnalato.
+    const seen = new Set(pairs.map((p) => `${p.station}:${p.fuel}`));
+    for (const o of overrides) {
+      if (!seen.has(`${o.station}:${o.fuel}`)) pairs.push({ station: o.station, fuel: o.fuel });
+    }
     const entries: SnapshotEntry[] = pairs.map(({ station, fuel }) => {
       const reports = this.reportsFor(station, fuel as Fuel, now);
-      let result = computeState(reports, now, this.params);
+      const ov = official.get(`${station}:${fuel}`);
+      let result = ov
+        ? officialResult(ov.state as State, ov.ts)
+        : computeState(reports, now, this.params);
       const isFrozen = frozen.has(station);
       // Congelamento (procedura contestazioni): mai verde, sempre ambra con la nota del gestore.
       if (isFrozen) result = { ...result, state: State.AMBER };
@@ -304,7 +360,8 @@ export class ProvinceStore {
       .map((r) => ({ id: r.station, fuel: r.fuel as Fuel, ts: r.ts }));
     const lastHour = this.count("SELECT COUNT(*) AS n FROM reports WHERE ts > ?", now - HOUR);
     const snap = buildSnapshot(prov, now, entries, this.isReadOnly(), { lastGreen, lastHour });
-    const body = JSON.stringify({ ...snap, fz: [...frozen] });
+    const ov = overrides.map((o) => [o.station, o.fuel, o.note]);
+    const body = JSON.stringify({ ...snap, fz: [...frozen], ov });
     this.cache = { body, etag: `"${fnv1a(body)}"`, at: now };
     return this.cache;
   }
@@ -318,6 +375,7 @@ export class ProvinceStore {
     this.sql.exec("DELETE FROM pow_used WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM abuse WHERE expires <= ?", now);
     this.sql.exec("DELETE FROM frozen WHERE until <= ?", now);
+    this.sql.exec("DELETE FROM overrides WHERE until <= ?", now);
     this.sql.exec("DELETE FROM transitions WHERE ts <= ?", now - RETENTION.transitionsMs);
     this.sql.exec("UPDATE contests SET contact = NULL WHERE ts <= ?", now - RETENTION.contactMs);
     this.sql.exec("DELETE FROM contests WHERE ts <= ?", now - RETENTION.contestsMs);
@@ -355,6 +413,7 @@ export class ProvinceStore {
       q("SELECT MIN(expires) AS t FROM abuse"),
       q("SELECT MIN(expires) AS t FROM pow_used"),
       q("SELECT MIN(until) AS t FROM frozen"),
+      q("SELECT MIN(until) AS t FROM overrides"),
     ].filter((t): t is number => t !== null);
     return times.length > 0 ? Math.min(...times) : null;
   }
@@ -427,6 +486,12 @@ export class ProvinceStore {
           now,
         )
         .toArray(),
+      overrides: this.sql
+        .exec<AdminOverview["overrides"][number]>(
+          "SELECT station, fuel, state, note, ts, until FROM overrides WHERE until > ? ORDER BY until",
+          now,
+        )
+        .toArray(),
       stats: this.sql
         .exec<AdminOverview["stats"][number]>(
           "SELECT hour, fuel, pos, neg, dropped FROM stats_hourly WHERE hour >= ? ORDER BY hour",
@@ -462,6 +527,13 @@ export class ProvinceStore {
         )
         .toArray(),
       frozen: frozen ?? null,
+      overrides: this.sql
+        .exec<StationHistory["overrides"][number]>(
+          "SELECT station, fuel, state, note, ts, until FROM overrides WHERE station = ? AND until > ?",
+          id,
+          now,
+        )
+        .toArray(),
     };
   }
 
@@ -503,6 +575,114 @@ export class ProvinceStore {
   adminReadOnly(on: boolean, now: number): void {
     this.setReadOnly(on);
     this.logAdmin("read_only", null, on ? "attivata" : "disattivata", now);
+  }
+
+  /** Le segnalazioni delle ultime 8 ore, dalla più recente (ADR-0013 rev. 2). */
+  recentReports(now: number): RecentReport[] {
+    return this.sql
+      .exec<Omit<RecentReport, "net"> & { pkey: string }>(
+        `SELECT rowid AS id, ts, station, fuel, has, near, queue, lim, pkey FROM reports
+         WHERE ts > ? ORDER BY ts DESC LIMIT 500`,
+        now - this.params.windowMs,
+      )
+      .toArray()
+      .map(({ pkey, ...r }) => ({ ...r, net: fnv1a(pkey).slice(0, 4) }));
+  }
+
+  /**
+   * Annulla segnalazioni (spam, errori evidenti) e ricalcola subito gli stati. La motivazione resta
+   * nel registro delle azioni. Restituisce quante ne ha trovate.
+   */
+  annulReports(ids: readonly number[], reason: string, now: number): number {
+    const found: Array<{ station: number; fuel: string; has: number }> = [];
+    for (const id of ids) {
+      const row = this.first<{ station: number; fuel: string; has: number }>(
+        "SELECT station, fuel, has FROM reports WHERE rowid = ?",
+        id,
+      );
+      if (!row) continue;
+      this.sql.exec("DELETE FROM reports WHERE rowid = ?", id);
+      found.push(row);
+    }
+    if (found.length === 0) return 0;
+    const pairs = new Map(found.map((r) => [`${r.station}:${r.fuel}`, r]));
+    for (const { station, fuel } of pairs.values()) {
+      // Un "c'è" annullato non deve sopravvivere come "ultima disponibilità": se resta verde,
+      // updateState la riscrive con le conferme rimaste.
+      if (found.some((r) => r.station === station && r.fuel === fuel && r.has === 1)) {
+        this.sql.exec("DELETE FROM last_green WHERE station = ? AND fuel = ?", station, fuel);
+      }
+      this.updateState(station, fuel as Fuel, now, "annul");
+    }
+    const stations = new Set(found.map((r) => r.station));
+    const only = stations.size === 1 ? [...stations][0] : undefined;
+    const n = found.length;
+    const what = n === 1 ? "1 segnalazione" : `${n} segnalazioni`;
+    this.logAdmin("annul", only ?? null, `${what} · ${reason}`, now);
+    this.cache = undefined;
+    return n;
+  }
+
+  /**
+   * Indicazione di QUI su un carburante (o tutti quelli venduti), con la nota che ne dice la fonte.
+   * `false` se l'impianto non vende quel carburante.
+   */
+  adminSetState(
+    id: number,
+    fuel: Fuel | null,
+    state: "green" | "red",
+    note: string,
+    hours: number,
+    now: number,
+  ): boolean {
+    const mask = this.stations.get(id) ?? 0;
+    const sold = FUELS.filter((f) => (mask & FUEL_BIT[f]) !== 0);
+    const fuels = fuel === null ? sold : sold.filter((f) => f === fuel);
+    if (fuels.length === 0) return false;
+    const shown = state === "green" ? State.GREEN : State.RED;
+    for (const f of fuels) {
+      const prev = this.first<{ state: number }>(
+        "SELECT state FROM current WHERE station = ? AND fuel = ?",
+        id,
+        f,
+      );
+      this.sql.exec(
+        `INSERT INTO overrides (station, fuel, state, note, ts, until) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT(station, fuel) DO UPDATE SET state = excluded.state, note = excluded.note,
+         ts = excluded.ts, until = excluded.until`,
+        id,
+        f,
+        shown,
+        note,
+        now,
+        now + hours * HOUR,
+      );
+      this.logTransition(id, f, now, prev ?? null, officialResult(shown, now), "official");
+    }
+    const what = `${fuel ?? "tutti i carburanti"} ${state === "green" ? "verde" : "rosso"}`;
+    this.logAdmin("set_state", id, `${what} · ${hours} h · ${note}`, now);
+    this.cache = undefined;
+    return true;
+  }
+
+  /** Toglie le indicazioni di QUI da un impianto. `false` se non ce n'erano. */
+  clearState(id: number, now: number): boolean {
+    const rows = this.sql
+      .exec<{ fuel: string; state: number }>(
+        "SELECT fuel, state FROM overrides WHERE station = ? AND until > ?",
+        id,
+        now,
+      )
+      .toArray();
+    this.sql.exec("DELETE FROM overrides WHERE station = ?", id);
+    if (rows.length === 0) return false;
+    for (const { fuel, state } of rows) {
+      const computed = this.stateOf(id, fuel as Fuel, now);
+      this.logTransition(id, fuel as Fuel, now, { state }, computed, "clear");
+    }
+    this.logAdmin("clear_state", id, null, now);
+    this.cache = undefined;
+    return true;
   }
 
   private logAdmin(action: string, station: number | null, detail: string | null, now: number) {
@@ -646,6 +826,39 @@ export class ProvinceStore {
     );
   }
 
+  /**
+   * Cede agli utenti: se le segnalazioni arrivate DOPO l'indicazione di QUI danno da sole uno stato
+   * chiaro (verde o rosso), l'indicazione decade e l'admin riceve un avviso.
+   */
+  private yieldOverride(id: number, fuel: Fuel, now: number): void {
+    const ov = this.first<{ state: number; ts: number }>(
+      "SELECT state, ts FROM overrides WHERE station = ? AND fuel = ? AND until > ?",
+      id,
+      fuel,
+      now,
+    );
+    if (!ov) return;
+    const after = computeState(
+      this.reportsFor(id, fuel, now).filter((r) => r.ts > ov.ts),
+      now,
+      this.params,
+    );
+    if (after.state !== State.GREEN && after.state !== State.RED) return;
+    this.sql.exec("DELETE FROM overrides WHERE station = ? AND fuel = ?", id, fuel);
+    this.logTransition(id, fuel, now, { state: ov.state }, this.stateOf(id, fuel, now), "users");
+    const users = after.state === State.GREEN ? "verde" : "rosso";
+    this.alert("override_superseded", id, fuel, `gli utenti segnalano ${users}`, now);
+  }
+
+  private activeOverrides(now: number): Override[] {
+    return this.sql
+      .exec<{ station: number; fuel: string; state: number; note: string; ts: number }>(
+        "SELECT station, fuel, state, note, ts FROM overrides WHERE until > ?",
+        now,
+      )
+      .toArray();
+  }
+
   private frozenNotes(now: number): Map<number, string> {
     const rows = this.sql
       .exec<{ station: number; note: string }>(
@@ -666,6 +879,19 @@ export class ProvinceStore {
   private count(query: string, ...b: SqlValue[]): number {
     return this.first<{ n: number }>(query, ...b)?.n ?? 0;
   }
+}
+
+/** Lo stato di un'indicazione di QUI: nessun conteggio degli utenti, età dall'indicazione. */
+function officialResult(state: State, ts: number): StateResult {
+  return {
+    state,
+    confirmations: 0,
+    absences: 0,
+    flags: Flag.OFFICIAL,
+    lastConfirmMs: ts,
+    lastAbsenceMs: null,
+    evidence: [],
+  };
 }
 
 function causeOf(prev: { state: number; flags: number } | null, next: StateResult): Cause {

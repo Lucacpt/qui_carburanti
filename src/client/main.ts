@@ -504,6 +504,12 @@ async function share(st: Station): Promise<void> {
   }
 }
 
+/** Indicazione di QUI: la nota con la fonte, ben distinta dalle segnalazioni degli utenti. */
+function officialNote(id: number, fuel: Fuel): HTMLElement | null {
+  const note = ui.snap?.official.get(rowKey(id, fuel));
+  return note ? h("p", { class: "note-box" }, `ℹ Indicazione di QUI: ${note}`) : null;
+}
+
 function renderDetail(id: number): HTMLElement {
   const st = ui.byId.get(id);
   const back = h(
@@ -535,6 +541,7 @@ function renderDetail(id: number): HTMLElement {
         "section",
         { class: "fuel" },
         statusLine(fuel, status),
+        officialNote(st.id, fuel),
         readOnly
           ? h("p", { class: "muted" }, "Segnalazioni sospese temporaneamente.")
           : h(

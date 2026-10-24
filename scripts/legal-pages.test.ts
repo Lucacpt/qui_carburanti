@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { NEAR_KM } from "../src/client/geo.ts";
 import { STORAGE_KEYS } from "../src/client/local.ts";
 import { DEFAULT_PARAMS } from "../src/domain/config.ts";
+import { MAX_STATE_HOURS } from "../src/worker/admin-input.ts";
 import { POW_TTL_MS } from "../src/worker/pow.ts";
 import { ABUSE, RETENTION } from "../src/worker/store/province-store.ts";
 
@@ -42,6 +43,7 @@ const EXPECTED: Record<string, string> = {
   transitionsMs: duration(RETENTION.transitionsMs),
   statsMs: duration(RETENTION.statsMs),
   lastGreenMs: duration(RETENTION.lastGreenMs),
+  officialMaxMs: duration(MAX_STATE_HOURS * HOUR),
 };
 
 const page = (name: string) =>

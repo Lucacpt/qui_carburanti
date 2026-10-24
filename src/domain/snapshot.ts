@@ -82,7 +82,8 @@ export function buildSnapshot(
       e.result.absences,
       ts === null ? 0 : bucket(now - ts),
       e.result.flags | (e.frozen ? Flag.FROZEN : 0),
-      reliability(e.result, now),
+      // L'affidabilità misura le segnalazioni degli utenti: non c'entra con un'indicazione di QUI.
+      e.result.flags & Flag.OFFICIAL ? 0 : reliability(e.result, now),
       e.queue.queue,
       e.queue.limit,
     ]);

@@ -1,6 +1,7 @@
 // API dell'area admin (ADR-0013): /api/admin/*. Nessuna risposta senza un login Access verificato.
 //   GET  /api/admin/overview?p=AV         avvisi, contestazioni, congelamenti, statistiche, registro
 //   GET  /api/admin/history?p=AV&id=1234  storico anonimo di un impianto (30 giorni)
+//   GET  /api/admin/reports?p=AV          segnalazioni delle ultime 8 ore, senza codici dei segnalatori
 //   POST /api/admin/action                comandi (vedi admin-input.ts)
 
 import { type AccessConfig, accessConfig, type Jwk, verifyAccessJwt } from "./access.ts";
@@ -82,6 +83,11 @@ export async function handleAdmin(
       return json(await province(prov).adminOverview(), 200, NOINDEX);
     }
 
+    if (url.pathname === "/api/admin/reports" && request.method === "GET") {
+      if (!provinces.includes(prov)) throw new HttpError(400, "provincia non valida");
+      return json(await province(prov).adminReports(), 200, NOINDEX);
+    }
+
     if (url.pathname === "/api/admin/history" && request.method === "GET") {
       const id = Number(url.searchParams.get("id"));
       if (!provinces.includes(prov)) throw new HttpError(400, "provincia non valida");
@@ -93,7 +99,7 @@ export async function handleAdmin(
 
     if (url.pathname === "/api/admin/action" && request.method === "POST") {
       requireSameOrigin(request, url);
-      const parsed = parseAdminAction(await readJson(request, 2048), provinces);
+      const parsed = parseAdminAction(await readJson(request, 4096), provinces);
       if (!parsed.ok) throw new HttpError(400, parsed.error);
       const res = await province(parsed.value.prov).adminAction(
         parsed.value.prov,
@@ -101,6 +107,8 @@ export async function handleAdmin(
       );
       if (res === "not_found") throw new HttpError(404, "elemento non trovato");
       if (res === "invalid_station") throw new HttpError(404, "impianto sconosciuto");
+      if (res === "invalid_fuel")
+        throw new HttpError(400, "l'impianto non vende questo carburante");
       return json({ ok: true }, 200, NOINDEX);
     }
 
