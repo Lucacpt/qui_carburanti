@@ -2,13 +2,12 @@
 
 > Art. 30 GDPR, con valutazione del legittimo interesse, verifica DPIA e procedura per le violazioni dei dati.
 > **Versione 1 · 23 ottobre 2026** · documento pubblico, per trasparenza.
-> ⚠️ Bozza in attesa di revisione legale. Non è una consulenza legale.
 
 ## 0. Titolare e premesse
 
 | | |
 |---|---|
-| **Titolare** | [DA COMPILARE: nome e cognome], persona fisica |
+| **Titolare** | Luca Ginolfi, persona fisica |
 | **Contatto** | privacy@quicarburanti.it |
 | **DPO** | Non designato: nessun monitoraggio regolare e sistematico su larga scala e nessuna categoria particolare di dati (art. 37) |
 | **Perché questo registro** | L'esenzione per chi ha meno di 250 dipendenti (art. 30, par. 5) non si applica, perché il trattamento non è occasionale |
