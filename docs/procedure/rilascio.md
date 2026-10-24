@@ -57,6 +57,18 @@ Senza i tre secret di Access l'area admin resta **chiusa** (503). Sullo staging 
 
 **Ruotare `POW_SECRET`:** eliminalo dalla dashboard e rifai il deploy, che ne genera uno nuovo. Le sfide aperte in quel momento (valide 5 minuti) vengono rifiutate e chi stava segnalando deve riprovare.
 
+## Prima del lancio: la pagina d'attesa
+Finché nell'environment `production` la variabile **`PUBLIC_LAUNCH`** non vale `1`, il deploy in produzione pubblica `public/presto.html` ("Arriviamo a brevissimo") al posto della lista. Vale per la home, per ogni scheda `/d/<id>` e per `/dati`. La pagina non è indicizzata.
+
+Tutto il resto funziona già: API, area admin (`/admin`, con Cloudflare Access), pagine informative e legali, `robots.txt`, `llms.txt`. Così si possono configurare e provare l'area admin e i secret prima del lancio.
+
+**Per lanciare:**
+1. *Settings → Environments → production → Environment variables → Add variable*: nome `PUBLIC_LAUNCH`, valore `1`.
+2. *Actions → Deploy*: apri l'ultimo rilascio (`v…`) e premi **Re-run jobs**. In alternativa, fai un nuovo tag di rilascio.
+3. Dopo il lancio, invia la sitemap a Search Console e Bing Webmaster Tools (`docs/08-seo.md`): prima del lancio le schede mostrano la pagina d'attesa.
+
+Per tornare alla pagina d'attesa, ad esempio durante un problema serio, togli la variabile e rilancia il job.
+
 ## Rilasciare una versione
 1. Con una PR aggiorna `version` in `package.json` (es. `0.1.0`), poi uniscila.
 2. Dal tuo computer, su `main` aggiornato:

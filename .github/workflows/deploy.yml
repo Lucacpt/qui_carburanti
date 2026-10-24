@@ -100,10 +100,13 @@ jobs:
       # In produzione niente segnaposto né avvisi di bozza nei documenti legali.
       - run: node scripts/check-legal.ts --strict
 
+      # Finché PUBLIC_LAUNCH (variabile dell'environment production) non vale 1, la home è la
+      # pagina d'attesa public/presto.html. Per lanciare: impostarla e rilanciare questo job.
       - name: Deploy in produzione
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
+          PUBLIC_LAUNCH: ${{ vars.PUBLIC_LAUNCH }}
         run: node scripts/deploy.ts production
 
       - name: Smoke test in sola lettura
