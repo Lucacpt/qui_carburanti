@@ -24,13 +24,13 @@
     "import:comuni": "node scripts/import-comuni.ts AV"
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.15",
-    "@cloudflare/workers-types": "5.20261015.1",
+    "@biomejs/biome": "2.6.2",
+    "@cloudflare/workers-types": "5.20261022.1",
     "@types/node": "24.19.2",
     "esbuild": "0.28.2",
     "typescript": "7.0.2",
     "vitest": "5.0.5",
-    "wrangler": "4.151.0"
+    "wrangler": "4.151.3"
   },
   "overrides": {
     "undici": "7.30.1"
